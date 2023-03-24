@@ -1,0 +1,3 @@
+[submodule "egctools/data/egc-spec"]
+	path = egctools/data/egc-spec
+	url = https://github.com/ggonnella/egc-spec
