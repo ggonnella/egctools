@@ -27,8 +27,77 @@ Organism groups
           {%- endfor -%}
       {%- endif -%}
       {% if gtype in n_G_by_child_type %}
-          {%- for child_type in n_G_by_child_type[gtype] %}
-            {{ child_type }}: {{ n_G_by_child_type[gtype][child_type] }}
+          {%- for klass in n_G_by_child_type[gtype] %}
+            {{klass}}:
+            {%- for child_type, c in n_G_by_child_type[gtype][klass].items() %}
+              {{ child_type }}: {{ c }}
+            {%- endfor -%}
           {%- endfor -%}
       {%- endif -%}
-    {%- endfor -%}
+    {%- endfor %}
+
+Genome contents
+
+  N.attributes: {{ by_record_type.A }}
+    By mode:
+      {%- for k in n_A_by_mode | sort %}
+      {{k}}: {{n_A_by_mode[k]}}
+      {%- endfor %}
+  N.units: {{ by_record_type.U }} (with M: {{ n_U_with_M }})
+    By number of attributes:
+      {%- for k,v in n_n_A_by_U.items() %}
+      with {{k}} attributes: {{v}}
+      {%- endfor %}
+    By type:
+      {%- for k in n_U_by_type | sort %}
+      {{k}}:{{'\t'}}{{n_U_by_type[k]}}   {{'\t'}}(n.attr {{n_A_mode_by_U_type[k].values()|sum}}, by mode: [ {% for x,y in n_A_mode_by_U_type[k].items() %} {{x}}: {{y}}; {{""}} {% endfor %}])
+      {%- endfor %}
+  N.models: {{ by_record_type.M }}
+      {%- for k,v in n_M_by_resource_id.items() %}
+      {{k}}: {{v}}
+      {%- endfor %}
+
+Rules:
+
+  N.value rules: {{ by_record_type.V }}
+    referring to {{ n_A_in_V }} attributes
+      avg n.value rules/attribute: {{ "%.1f" | format(by_record_type.V / n_A_in_V) }}
+    referring to {{ n_G_in_V }} groups
+      avg n.value rules/group: {{ "%.1f" | format(by_record_type.V/n_G_in_V) }}
+    By n.sources:
+      {%- for k in n_V_by_n_sources | sort %}
+      {{k}}: {{n_V_by_n_sources[k]}}
+      {%- endfor %}
+    By group portion:
+      {%- for k in n_V_by_G_portion | sort %}
+      {{k}}: {{n_V_by_G_portion[k]}}
+      {%- endfor %}
+    By operator:
+      {%- for k in n_V_by_operator | sort %}
+      {{k}}: {{n_V_by_operator[k]}} {{"  \t"}}({%- for k2,v2 in n_V_by_operator_and_reference[k].items() -%}
+          {{k2}}: {{v2}};{{" "}}
+        {%- endfor -%}{{" "}})
+      {%- endfor %}
+
+    N.comparison rules: {{ by_record_type.C }}
+    referring to {{ n_A_in_C }} attributes
+      avg n.value rules/attribute: {{ "%.1f" | format(by_record_type.V / n_A_in_C) }}
+    referring to {{ n_G_in_C }} groups
+      avg n.value rules/group: {{ "%.1f" | format(by_record_type.V/n_G_in_C) }}
+    By n.sources:
+      {%- for k in n_C_by_n_sources | sort %}
+      {{k}}: {{n_C_by_n_sources[k]}}
+      {%- endfor %}
+    By n.attributes:
+      {%- for k in n_C_by_n_A | sort %}
+      {{k}}: {{n_C_by_n_A[k]}}
+      {%- endfor %}
+    By group portion:
+      {%- for k in n_C_by_G_portion | sort %}
+      {{k}}: {{n_C_by_G_portion[k]}}
+      {%- endfor %}
+    By operator:
+      {%- for k in n_C_by_operator | sort %}
+      {{k}}: {{n_C_by_operator[k]}}
+      {%- endfor %}
+

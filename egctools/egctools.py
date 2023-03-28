@@ -35,6 +35,7 @@ def statistics(fname, stats = None):
              'n_U_by_type': defaultdict(int),
              'n_A_by_mode': defaultdict(int),
              'n_A_mode_by_U_type': defaultdict(lambda: defaultdict(int)),
+             'n_A_by_U': defaultdict(int),
              'U_with_M': set(),
              'n_M_by_resource_id': defaultdict(int),
              'n_V_by_n_sources': defaultdict(int),
@@ -51,7 +52,7 @@ def statistics(fname, stats = None):
              'n_C_by_operator': defaultdict(int),
              'n_C_by_n_A': {1: 0, 2: 0},
              'n_G_defprefix_by_type': defaultdict(lambda: defaultdict(int)),
-             'n_G_by_child_type': defaultdict(lambda: defaultdict(int)),
+             'n_G_by_child_type': defaultdict(lambda: defaultdict(lambda: defaultdict(int))),
              }
 
   for line in parsed_lines(fname):
@@ -79,17 +80,27 @@ def statistics(fname, stats = None):
         # (2) go to each group and check the type
         child_types = set(lines["G"][g]["type"] for g in child_groups)
         # (3) count the combinations in a dict
+        if child_types == {"taxonomic"}:
+          klass = "only_taxonomic"
+        elif "taxonomic" not in child_types:
+          klass = "only_not_taxonomic"
+        else:
+          klass = "mixed"
         key = ",".join(sorted(child_types))
-        stats['n_G_by_child_type'][line["type"]][key] += 1
+        stats['n_G_by_child_type'][line["type"]][klass][key] += 1
 
     elif line['record_type'] == "U":
       stats['n_U_by_type'][line["type"]] += 1
 
     elif line['record_type'] == "A":
-      mkey = str(line['mode'])
+      if isinstance(line["mode"], str):
+        mkey = line["mode"]
+      else:
+        mkey = line["mode"]['mode']
       unit = lines['U'][line["unit_id"]]
       stats['n_A_by_mode'][mkey]+= 1
       stats['n_A_mode_by_U_type'][unit['type']][mkey] += 1
+      stats['n_A_by_U'][line['unit_id']] += 1
 
     elif line['record_type'] == "M":
       stats['U_with_M'].add(line['unit_id'])
@@ -140,6 +151,10 @@ def statistics(fname, stats = None):
   del stats['A_in_C']
   stats['n_G_in_C'] = len(stats['G_in_C'])
   del stats['G_in_C']
+  stats['n_n_A_by_U'] = defaultdict(int)
+  for unit in stats['n_A_by_U']:
+    stats['n_n_A_by_U'][stats['n_A_by_U'][unit]] += 1
+  del stats['n_A_by_U']
   return stats
 
 from jinja2 import Environment, FileSystemLoader
