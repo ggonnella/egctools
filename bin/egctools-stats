@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""
+Statistics report of the contents of a EGC file
+
+Usage:
+  egctools-stats [options] <egcfile>
+
+Arguments:
+  <egcfile>  EGC file to process
+
+Options:
+  -h --help     Show this screen.
+  --version     Show version.
+"""
+import egctools
+from docopt import docopt
+
+def main(args):
+  egcfile = args['<egcfile>']
+  s=egctools.egctools.statistics(egcfile)
+  print(egctools.egctools.stats_report(s))
+
+if __name__ == '__main__':
+  args = docopt(__doc__, version=egctools.__version__)
+  main(args)
