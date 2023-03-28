@@ -1,0 +1,34 @@
+Total number of lines: {{ total_count }}
+
+Sources documentation
+
+  n.extracts: {{ by_record_type.S + by_record_type.T }}
+  - n.snippets: {{ by_record_type.S }} ({{ '%.1f' | format(by_record_type.S / (by_record_type.S + by_record_type.T) * 100) }}% of extracts)
+  - n.tables:   {{ by_record_type.T }} ({{ '%.1f' | format(by_record_type.T / (by_record_type.S + by_record_type.T) * 100) }}% of extracts)
+  from {{ by_record_type.D }} documents
+    avg n.snippets/document: {{ '%.2f' | format(by_record_type.S / by_record_type.D) }}
+    avg n.extracts/document: {{ '%.2f' | format((by_record_type.S + by_record_type.T) / by_record_type.D) }}
+
+Organism groups
+
+  N.groups: {{ by_record_type.G }}
+  Types:
+    {%- for gtype in n_G_by_type %}
+      {{ gtype }}: {{ n_G_by_type[gtype] }}
+      {%- if gtype in n_G_defprefix_by_type -%}
+          {{ '      ' }} Definition types: {{ ' ' }}
+            {%- for defprefix in n_G_defprefix_by_type[gtype] -%}
+               {{ defprefix }}: {{ n_G_defprefix_by_type[gtype][defprefix] }}; {{ ' ' }}
+            {%- endfor -%}
+      {%- endif -%}
+      {% if gtype in info_G_by_type %}
+          {%- for item in info_G_by_type[gtype] %}
+            {{ item[0] }}:{{ "\t" }}{{ item[1] }}
+          {%- endfor -%}
+      {%- endif -%}
+      {% if gtype in n_G_by_child_type %}
+          {%- for child_type in n_G_by_child_type[gtype] %}
+            {{ child_type }}: {{ n_G_by_child_type[gtype][child_type] }}
+          {%- endfor -%}
+      {%- endif -%}
+    {%- endfor -%}
