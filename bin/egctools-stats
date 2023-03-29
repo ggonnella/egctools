@@ -3,10 +3,12 @@
 Statistics report of the contents of a EGC file
 
 Usage:
-  egctools-stats [options] <egcfile>
+  egctools-stats [options] <egcfile>...
 
 Arguments:
-  <egcfile>  EGC file to process
+  <egcfile>  EGC files to process
+               if multiple files are given
+               the statistics are combined
 
 Options:
   -h --help     Show this screen.
@@ -16,8 +18,10 @@ import egctools
 from docopt import docopt
 
 def main(args):
-  egcfile = args['<egcfile>']
-  s=egctools.egctools.statistics(egcfile)
+  egcfiles = args['<egcfile>']
+  s = None
+  for egcfile in egcfiles:
+    s=egctools.egctools.statistics(egcfile, s)
   print(egctools.egctools.stats_report(s))
 
 if __name__ == '__main__':

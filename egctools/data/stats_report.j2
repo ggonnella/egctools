@@ -79,7 +79,7 @@ Rules:
         {%- endfor -%}{{" "}})
       {%- endfor %}
 
-    N.comparison rules: {{ by_record_type.C }}
+  N.comparison rules: {{ by_record_type.C }}
     referring to {{ n_A_in_C }} attributes
       avg n.value rules/attribute: {{ "%.1f" | format(by_record_type.V / n_A_in_C) }}
     referring to {{ n_G_in_C }} groups

@@ -52,7 +52,14 @@ def statistics(fname, stats = None):
              'n_C_by_operator': defaultdict(int),
              'n_C_by_n_A': {1: 0, 2: 0},
              'n_G_defprefix_by_type': defaultdict(lambda: defaultdict(int)),
-             'n_G_by_child_type': defaultdict(lambda: defaultdict(lambda: defaultdict(int))),
+             'n_G_by_child_type': \
+                 defaultdict(lambda: defaultdict(lambda: defaultdict(int))),
+             'n_n_A_by_U': defaultdict(int),
+             'n_U_with_M': 0,
+             'n_A_in_V': 0,
+             'n_G_in_V': 0,
+             'n_A_in_C': 0,
+             'n_G_in_C': 0,
              }
 
   for line in parsed_lines(fname):
@@ -141,20 +148,19 @@ def statistics(fname, stats = None):
           stats['n_C_by_G_portion']['all'] += 1
       stats['n_C_by_operator'][line['operator']] += 1
 
-  stats['n_U_with_M'] = len(stats['U_with_M'])
-  del stats['U_with_M']
-  stats['n_A_in_V'] = len(stats['A_in_V'])
-  del stats['A_in_V']
-  stats['n_G_in_V'] = len(stats['G_in_V'])
-  del stats['G_in_V']
-  stats['n_A_in_C'] = len(stats['A_in_C'])
-  del stats['A_in_C']
-  stats['n_G_in_C'] = len(stats['G_in_C'])
-  del stats['G_in_C']
-  stats['n_n_A_by_U'] = defaultdict(int)
+  stats['n_U_with_M'] += len(stats['U_with_M'])
+  stats['U_with_M'] = set()
+  stats['n_A_in_V'] += len(stats['A_in_V'])
+  stats['A_in_V'] = set()
+  stats['n_G_in_V'] += len(stats['G_in_V'])
+  stats['G_in_V'] = set()
+  stats['n_A_in_C'] += len(stats['A_in_C'])
+  stats['A_in_C'] = set()
+  stats['n_G_in_C'] += len(stats['G_in_C'])
+  stats['G_in_C'] = set()
   for unit in stats['n_A_by_U']:
     stats['n_n_A_by_U'][stats['n_A_by_U'][unit]] += 1
-  del stats['n_A_by_U']
+  stats['n_A_by_U'] = defaultdict(int)
   return stats
 
 from jinja2 import Environment, FileSystemLoader
