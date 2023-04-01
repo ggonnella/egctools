@@ -23,7 +23,7 @@ Organism groups
       {%- endif -%}
       {% if gtype in info_G_by_type %}
           {%- for item in info_G_by_type[gtype] %}
-            {{ item[0] }}:{{ "\t" }}{{ item[1] }}
+            {{ item[0] }}:{{ "\t" }}{{ item[1] }}{{ "\t"  }}{{ item[2]  }}
           {%- endfor -%}
       {%- endif -%}
       {% if gtype in n_G_by_child_type %}

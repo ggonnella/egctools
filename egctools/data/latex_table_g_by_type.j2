@@ -1,0 +1,17 @@
+\begin{table}
+\centering
+\begin{tabular}{lll}
+\toprule
+Identifier & Name & Definition \\
+\midrule
+& \\[-3mm]
+{%- for item in info_G_by_type[selected_gtype] %}
+\texttt{ {{item[0] | texesc }} } & {{item[1] | texesc }} & {{item[2] | texesc}} \\
+{%- endfor %}
+\bottomrule
+\end{tabular}
+\caption{List of organism group definition (G) records
+         with type {{selected_gtype | texesc}}.}
+\label{G_with_type_{{selected_gtype}}}
+\vspace{5mm}
+\end{table}

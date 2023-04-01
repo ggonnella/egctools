@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""
+Prepare one of a predefined set of report tables in Latex format.
+
+Usage:
+  egctools-stats [options] G_by_type <type> <egcfile>...
+
+Tables:
+  G_by_type  Organism group definitions of given type
+
+Arguments:
+  <type>     Type of group
+  <egcfile>  EGC files to process
+               if multiple files are given
+               the statistics are combined
+
+Options:
+  --format F    Format of output [default: latex]
+  -h --help     Show this screen.
+  --version     Show version.
+"""
+import egctools
+from docopt import docopt
+
+def main(args):
+  egcfiles = args['<egcfile>']
+  s = None
+  for egcfile in egcfiles:
+    s=egctools.egctools.statistics(egcfile, s)
+  if args['G_by_type']:
+    print(egctools.egctools.table(s, args["--format"],
+             "G_by_type", selected_gtype=args["<type>"]))
+
+if __name__ == '__main__':
+  args = docopt(__doc__, version=egctools.__version__)
+  main(args)

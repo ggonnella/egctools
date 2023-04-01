@@ -6,7 +6,6 @@ _data = importlib.resources.files("egctools").joinpath("data")
 _egcspec = _data.joinpath("egc-spec")
 _specfile = _egcspec.joinpath("egc.tf.yaml")
 SPEC = textformats.Specification(str(_specfile))
-STATS_REPORT_TEMPLATE = "stats_report.j2"
 
 def parsed_line(s):
   elements = SPEC["line"].decode(s.rstrip("\n"))
@@ -74,19 +73,25 @@ def statistics(fname, stats = None):
       stats['n_G_by_type'][line["type"]] += 1
       if line["type"] not in ['combined', 'taxonomic', 'strain', 'inverted']:
         stats['info_G_by_type'][line["type"]].append(\
-            (line["name"], line["definition"]))
+            (line['id'], line["name"], line["definition"]))
       if line["type"] not in ["combined", "inverted"]:
         pfx = line["definition"].split(":")[0]
         stats['n_G_defprefix_by_type'][line["type"]][pfx] += 1
       else:
-        # extract the identifiers from combined and inverted
-        # then go to each group and check the type
-        # then count the combinations in a dict
-        # (1) extract the identifiers, made of letters, digits and underscores
         child_groups = re.findall(r"[a-zA-Z0-9_]+", line["definition"])
-        # (2) go to each group and check the type
-        child_types = set(lines["G"][g]["type"] for g in child_groups)
-        # (3) count the combinations in a dict
+        child_types = {g: lines["G"][g]["type"] for g in child_groups}
+        while "inverted" in child_types.values() or \
+              "combined" in child_types.values():
+          to_delete = []
+          for g in child_types:
+            if child_types[g] in ["inverted", "combined"]:
+              child_groups.extend(re.findall(r"[a-zA-Z0-9_]+",
+                                             lines["G"][g]["definition"]))
+              to_delete.append(g)
+          child_groups = [g for g in child_groups if g not in to_delete]
+          child_types = {g: lines["G"][g]["type"] for g in child_groups}
+
+        child_types = set(child_types.values())
         if child_types == {"taxonomic"}:
           klass = "only_taxonomic"
         elif "taxonomic" not in child_types:
@@ -165,7 +170,39 @@ def statistics(fname, stats = None):
 
 from jinja2 import Environment, FileSystemLoader
 
+STATS_REPORT_TEMPLATE = "stats_report.j2"
+
 def stats_report(s):
   env = Environment(loader=FileSystemLoader(str(_data)))
   template = env.get_template(STATS_REPORT_TEMPLATE)
   return template.render(s)
+
+# from https://stackoverflow.com/questions/16259923/
+#       how-can-i-escape-latex-special-characters-inside-django-templates
+def tex_escape(text):
+    conv = {
+        '&': r'\&',
+        '%': r'\%',
+        '$': r'\$',
+        '#': r'\#',
+        '_': r'\_',
+        '{': r'\{',
+        '}': r'\}',
+        '~': r'\textasciitilde{}',
+        '^': r'\^{}',
+        '\\': r'\textbackslash{}',
+        '<': r'\textless{}',
+        '>': r'\textgreater{}',
+    }
+    regex = re.compile('|'.join(re.escape(str(key)) for
+      key in sorted(conv.keys(), key = lambda item: - len(item))))
+    return regex.sub(lambda match: conv[match.group()], text)
+
+def table(s, fmt, name, **params):
+  env = Environment(loader=FileSystemLoader(str(_data)))
+  env.filters["texesc"] = tex_escape
+  template_filename = f"{fmt}_table_{name}.j2"
+  template = env.get_template(template_filename)
+  render_params = s.copy()
+  render_params.update(params)
+  return template.render(render_params)
