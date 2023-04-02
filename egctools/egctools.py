@@ -120,12 +120,12 @@ def lines_index(fname):
       for group_id in _find_VC_groups(line):
         _connect(lines_idx, rt, line_id, 'G', group_id)
     i += 1
-    for source_id in lines_idx['S_or_T'].keys():
-      for rt2 in lines_idx['S_or_T'][source_id]['ref_by']:
-        for line_id in lines_idx['S_or_T'][source_id]['ref_by'][rt2]:
-          rt = 'S' if source_id in lines_idx['S'] else 'T'
-          _connect(lines_idx, rt2, line_id, rt, source_id)
-    del lines_idx['S_or_T']
+  for source_id in lines_idx['S_or_T'].keys():
+    for rt2 in lines_idx['S_or_T'][source_id]['ref_by']:
+      for line_id in lines_idx['S_or_T'][source_id]['ref_by'][rt2]:
+        rt = 'S' if source_id in lines_idx['S'] else 'T'
+        _connect(lines_idx, rt2, line_id, rt, source_id)
+  del lines_idx['S_or_T']
   return lines, lines_idx
 
 def _extract_V_or_C(rule_rt, rule_id, lines, lines_idx, skip, indent, indented,
