@@ -10,15 +10,17 @@ Arguments:
   <id>       ID of record
 
 Options:
-  -h --help     Show this screen.
-  --version     Show version.
+  -i, --indented    Indent results
+  -h --help         Show this screen.
+  --version         Show version.
 """
 import egctools
 from docopt import docopt
 
 def main(args):
   egcfile = args['<egcfile>']
-  for line in egctools.egctools.extract(args['<id>'], egcfile):
+  for line in egctools.egctools.extract(args['<id>'], egcfile,
+      args['--indented']):
     print(line)
 
 if __name__ == '__main__':
