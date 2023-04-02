@@ -11,6 +11,7 @@ Arguments:
 
 Options:
   -i, --indented    Indent results
+  -s, --spaced      Add a line between each record
   -h --help         Show this screen.
   --version         Show version.
 """
@@ -19,8 +20,12 @@ from docopt import docopt
 
 def main(args):
   egcfile = args['<egcfile>']
+  first_line = True
   for line in egctools.egctools.extract(args['<id>'], egcfile,
       args['--indented']):
+    if args['--spaced'] and not first_line:
+      print()
+    first_line = False
     print(line)
 
 if __name__ == '__main__':
