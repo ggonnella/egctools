@@ -132,7 +132,7 @@ def _extract_V_or_C(rule_rt, rule_id, lines, lines_idx, skip, indent, indented,
                     numbered, follow_G, exclude_G_id, follow_A, exclude_A_id,
                     follow_ST):
   n = lines_idx[rule_rt][rule_id]['line']
-  nstr = f"[{n}]\t" if numbered else ""
+  nstr = f"[{n+1}]\t" if numbered else ""
   results = [nstr + indent + lines[n]]
   skip.append(rule_id)
   indent1 = indent + "  " if indented else ""
@@ -157,7 +157,7 @@ def _extract_V_or_C(rule_rt, rule_id, lines, lines_idx, skip, indent, indented,
 def _extract_S_or_T(source_rt, source_id, lines, lines_idx, skip, indent,
                     indented, numbered, follow_D, climb_VC):
   n = lines_idx[source_rt][source_id]['line']
-  nstr = f"[{n}]\t" if numbered else ""
+  nstr = f"[{n+1}]\t" if numbered else ""
   results = [nstr + indent + lines[n]]
   skip.append(source_id)
   line = parsed_line(lines[n])
@@ -179,7 +179,7 @@ def _extract_S_or_T(source_rt, source_id, lines, lines_idx, skip, indent,
 def _extract_A(attr_id, lines, lines_idx, skip, indent, indented, numbered,
                follow_U, exclude_U_id, climb_VC):
   n = lines_idx['A'][attr_id]['line']
-  nstr = f"[{n}]\t" if numbered else ""
+  nstr = f"[{n+1}]\t" if numbered else ""
   results = [nstr + indent + lines[n]]
   skip.append(attr_id)
   indent1 = indent + "  " if indented else ""
@@ -204,7 +204,7 @@ def _extract_recursively(rt, line_id, lines, lines_idx, skip, indent, indented,
     line2_id, indent1 = stack.pop()
     if line2_id not in skip:
       n = lines_idx[rt][line2_id]['line']
-      nstr = f"[{n}]\t" if numbered else ""
+      nstr = f"[{n+1}]\t" if numbered else ""
       results.append(nstr + indent1 + lines[n])
       skip.append(line2_id)
       indent2 = indent1 + "  " if indented else ""
@@ -219,7 +219,7 @@ def _extract_recursively(rt, line_id, lines, lines_idx, skip, indent, indented,
 def _extract_U(unit_id, lines, lines_idx, skip, indent, indented, numbered,
                follow_U, climb_U, exclude_U_id, follow_M, climb_A):
   n = lines_idx['U'][unit_id]['line']
-  nstr = f"[{n}]\t" if numbered else ""
+  nstr = f"[{n+1}]\t" if numbered else ""
   results = [nstr + indent + lines[n]]
   indent1 = indent + "  " if indented else ""
   skip.append(unit_id)
@@ -242,7 +242,7 @@ def _extract_U(unit_id, lines, lines_idx, skip, indent, indented, numbered,
 def _extract_G(group_id, lines, lines_idx, skip, indent, indented, numbered,
                follow_G, climb_G, exclude_G_id, climb_VC):
   n = lines_idx['G'][group_id]['line']
-  nstr = f"[{n}]\t" if numbered else ""
+  nstr = f"[{n+1}]\t" if numbered else ""
   results = [nstr + indent + lines[n]]
   skip.append(group_id)
   indent1 = indent + "  " if indented else ""
@@ -263,7 +263,7 @@ def _extract_G(group_id, lines, lines_idx, skip, indent, indented, numbered,
 def _extract_D(document_id, lines, lines_idx, skip, indent, indented, numbered,
               climb_ST):
   n = lines_idx['D'][document_id]['line']
-  nstr = f"[{n}]\t" if numbered else ""
+  nstr = f"[{n+1}]\t" if numbered else ""
   results = [nstr + indent + lines[n]]
   skip.append(document_id)
   indent1 = indent + "  " if indented else ""
