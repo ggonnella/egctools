@@ -111,7 +111,7 @@ def lines_index(fname):
       for unit_id in _find_A_units(line):
         _connect(lines_idx, 'A', line_id, 'U', unit_id)
     elif rt == 'M':
-      _connect(lines_idx, 'M', line_id, 'U', line['unit_id'])
+      lines_idx['U'][line['unit_id']]['ref_by']['M'].append(i)
     elif rt == 'V' or rt == 'C':
       for source_id in _find_VC_sources(line):
         lines_idx['S_or_T'][source_id]['ref_by'][rt].append(line_id)
@@ -209,8 +209,9 @@ def _extract_recursively(rt, line_id, lines, lines_idx, skip, indent, indented,
       skip.append(line2_id)
       indent2 = indent1 + "  " if indented else ""
       if follow_M:
-        for model_lineno in lines_idx[rt][line2_id][direction]['M']:
-          results.append(indent2 + lines[model_lineno])
+        for model_lineno in lines_idx[rt][line2_id]['ref_by']['M']:
+          nstr = f"[{model_lineno+1}]\t" if numbered else ""
+          results.append(nstr + indent2 + lines[model_lineno])
       for line3_id in lines_idx[rt][line2_id][direction][rt]:
         if line3_id not in skip and line3_id != exclude_id:
           stack.append((line3_id, indent2))
@@ -224,8 +225,9 @@ def _extract_U(unit_id, lines, lines_idx, skip, indent, indented, numbered,
   indent1 = indent + "  " if indented else ""
   skip.append(unit_id)
   if follow_M:
-    for model_lineno in lines_idx['U'][unit_id]['refs']['M']:
-      results.append(indent1 + lines[model_lineno])
+    for model_lineno in lines_idx['U'][unit_id]['ref_by']['M']:
+      nstr = f"[{model_lineno+1}]\t" if numbered else ""
+      results.append(nstr + indent1 + lines[model_lineno])
   if follow_U:
     results.extend(_extract_recursively('U', unit_id, lines, lines_idx, skip,
                 indent1, indented, numbered, follow_M, exclude_U_id, 'refs'))
