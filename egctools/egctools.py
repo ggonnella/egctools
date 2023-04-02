@@ -27,171 +27,264 @@ def collect_lines_with_id(fname):
       lines[rt][line['id']] = line
   return lines
 
+def _find_G_parents(line):
+  parent_groups = []
+  if line['type'] == 'combined' or line['type'] == 'inverted':
+    parent_groups.extend(re.findall(r"[a-zA-Z0-9_]+", line["definition"]))
+  m = re.match(r'^derived:([a-zA-Z0-9_]):.*', line['definition'])
+  if m:
+    parent_groups.append(m.group(1))
+  return parent_groups
+
+def _find_U_parents(line):
+  parent_units = []
+  if line['type'].startswith('homolog_'):
+    m = re.match(r'^homolog:([a-zA-Z0-9_])', line['definition'])
+    if m:
+      parent_units.append(m.group(1))
+  elif line['type'] == 'set!:arrangement':
+    parts = line['definition'].split(',')
+    for part in parts:
+      m = re.match(r'^([a-zA-Z0-9_]+)$', part)
+      if m:
+        parent_units.append(m.group(1))
+  elif line['type'].startswith('*') or line['type'].startswith('set!:'):
+    parent_units = re.findall(r"[a-zA-Z0-9_]+", line["definition"])
+  return parent_units
+
+def _find_A_units(line):
+  units = [line['unit_id']]
+  if isinstance(line['mode'], dict) and 'reference' in line['mode']:
+    units.append(line['mode']['reference'])
+  return units
+
+def _find_VC_sources(line):
+  if isinstance(line['source'], list):
+    return line['source']
+  else:
+    return [line['source']]
+
+def _find_VC_attributes(line):
+  if isinstance(line['attribute'], dict):
+    return [line['attribute']['id1'], line['attribute']['id2']]
+  else:
+    return [line['attribute']]
+
+def _find_VC_groups(line):
+  if 'group' in line:
+    return [line['group']['id']]
+  else:
+    return [line['group1']['id'], line['group2']['id']]
+
+def _connect(lines_idx, rt1, id1, rt2, id2):
+  lines_idx[rt1][id1]['refs'][rt2].append(id2)
+  lines_idx[rt2][id2]['ref_by'][rt1].append(id1)
+
 def lines_index(fname):
   lines = []
   lines_idx = defaultdict(\
                 lambda: defaultdict(\
                   lambda: {'line': None,
-                           'from': defaultdict(list),
-                           'to': defaultdict(list)}))
+                           'ref_by': defaultdict(list),
+                           'refs': defaultdict(list)}))
   i = 0
   for uline, line in unparsed_and_parsed_lines(fname):
     lines.append(uline)
     rt = line['record_type']
-    document_id_dt = SPEC["external_resource::external_resource_link"]
     if 'id' in line:
       line_id = line['id']
       lines_idx[rt][line_id]['line'] = i
     if 'document_id' in line:
+      document_id_dt = SPEC["external_resource::external_resource_link"]
       document_id = document_id_dt.encode(line['document_id'])
     if rt == 'D':
       lines_idx["D"][document_id]['line'] = i
     elif rt == 'S' or rt == 'T':
-      lines_idx[rt][line_id]['to']['D'].append(document_id)
-      lines_idx["D"][document_id]['from'][rt].append(line_id)
+      _connect(lines_idx, rt, line_id, 'D', document_id)
     elif rt == 'G':
-      if line['type'] == 'combined' or line['type'] == 'inverted':
-        parent_groups = re.findall(r"[a-zA-Z0-9_]+", line["definition"])
-        for parent_group_id in parent_groups:
-          lines_idx["G"][line_id]['to']['G'].append(parent_group_id)
-          lines_idx["G"][parent_group_id]['from']["G"].append(line_id)
-      m = re.match(r'^derived:([a-zA-Z0-9_]):.*', line['definition'])
-      if m:
-        parent_group_id = m.group(1)
-        lines_idx["G"][line_id]['to']['G'].append(parent_group_id)
-        lines_idx["G"][parent_group_id]['from']["G"].append(line_id)
+      for parent_id in _find_G_parents(line):
+        _connect(lines_idx, 'G', line_id, 'G', parent_id)
     elif rt == 'U':
-      if line['type'].startswith('homolog_'):
-        m = re.match(r'^homolog:([a-zA-Z0-9_])', line['definition'])
-        if m:
-          parent_unit_id = m.group(1)
-          lines_idx["U"][line_id]['to']['U'].append(parent_unit_id)
-          lines_idx["U"][parent_unit_id]['from']["U"].append(line_id)
-      elif line['type'] == 'set!:arrangement':
-        parts = line['definition'].split(',')
-        for part in parts:
-          m = re.match(r'^([a-zA-Z0-9_]+)$', part)
-          if m:
-            parent_unit_id = m.group(1)
-            lines_idx["U"][line_id]['to']['U'].append(parent_unit_id)
-            lines_idx["U"][parent_unit_id]['from']["U"].append(line_id)
-      elif line['type'].startswith('*') or line['type'].startswith('set!:'):
-        parent_groups = re.findall(r"[a-zA-Z0-9_]+", line["definition"])
-        for parent_group_id in parent_groups:
-          lines_idx["U"][line_id]['to']['G'].append(parent_group_id)
-          lines_idx["G"][parent_group_id]['from']["U"].append(line_id)
-    elif rt == 'A' or rt == 'M':
-      unit_id = line['unit_id']
-      lines_idx[rt][line_id]['to']['U'].append(unit_id)
-      if rt == 'A':
-        lines_idx["U"][unit_id]['from']['A'].append(line_id)
-        if isinstance(line['mode'], dict) and 'reference' in line['mode']:
-          ref_id = line['mode']['reference']
-          lines_idx["U"][unit_id]['from']['A'].append(ref_id)
-          lines_idx["A"][line_id]['to']['U'].append(ref_id)
-      else:
-        lines_idx["U"][unit_id]['from']['M'].append(i)
+      for parent_id in _find_U_parents(line):
+        _connect(lines_idx, 'U', line_id, 'U', parent_id)
+    elif rt == 'A':
+      for unit_id in _find_A_units(line):
+        _connect(lines_idx, 'A', line_id, 'U', unit_id)
+    elif rt == 'M':
+      _connect(lines_idx, 'M', line_id, 'U', line['unit_id'])
     elif rt == 'V' or rt == 'C':
-      if isinstance(line['attribute'], dict):
-        attributes = [line['attribute']['id1'], line['attribute']['id2']]
-      else:
-        attributes = [line['attribute']]
-      for attribute_id in attributes:
-        lines_idx[rt][line_id]['to']['A'].append(attribute_id)
-        lines_idx["A"][attribute_id]['from'][rt].append(line_id)
-      if rt == 'V':
-        groups = [line['group']['id']]
-      else:
-        groups = [line['group1']['id'], line['group2']['id']]
-      for group_id in groups:
-        lines_idx[rt][line_id]['to']['G'].append(group_id)
-        lines_idx["G"][group_id]['from'][rt].append(line_id)
-      if isinstance(line['source'], list):
-        sources = line['source']
-      else:
-        sources = [line['source']]
-      for source_id in sources:
-        lines_idx[rt][line_id]['to']['S'].append(source_id)
-        lines_idx["S"][source_id]['from'][rt].append(line_id)
+      for source_id in _find_VC_sources(line):
+        lines_idx['S_or_T'][source_id]['ref_by'][rt].append(line_id)
+      for attribute_id in _find_VC_attributes(line):
+        _connect(lines_idx, rt, line_id, 'A', attribute_id)
+      for group_id in _find_VC_groups(line):
+        _connect(lines_idx, rt, line_id, 'G', group_id)
     i += 1
+    for source_id in lines_idx['S_or_T'].keys():
+      for rt2 in lines_idx['S_or_T'][source_id]['ref_by']:
+        for line_id in lines_idx['S_or_T'][source_id]['ref_by'][rt2]:
+          rt = 'S' if source_id in lines_idx['S'] else 'T'
+          _connect(lines_idx, rt2, line_id, rt, source_id)
+    del lines_idx['S_or_T']
   return lines, lines_idx
 
-def _extract_S(snippet_id, fname, lines, lines_idx, indent, show_D):
-  uline = lines[lines_idx['S'][snippet_id]['line']]
-  line = parsed_line(lines[lines_idx['S'][snippet_id]['line']])
+def _extract_V_or_C(rule_rt, rule_id, lines, lines_idx, skip, indent,
+                    follow_G, exclude_G_id, follow_A, exclude_A_id, follow_ST):
+  results = [indent + lines[lines_idx[rule_rt][rule_id]['line']]]
+  skip.append(rule_id)
+  indent1 = indent+"  "
+  if follow_G:
+    for group_id in lines_idx[rule_rt][rule_id]['refs']['G']:
+      if group_id != exclude_G_id and group_id not in skip:
+        results.extend(_extract_G(group_id, lines, lines_idx, skip,
+                                  indent1, True, False, exclude_G_id, False))
+  if follow_A:
+    for attr_id in lines_idx[rule_rt][rule_id]['refs']['A']:
+      if attr_id != exclude_A_id and attr_id not in skip:
+        results.extend(_extract_A(attr_id, lines, lines_idx, skip,
+                                  indent1, True, None, False))
+  if follow_ST:
+    for source_rt in ['S', 'T']:
+      for source_id in lines_idx[rule_rt][rule_id]['refs'][source_rt]:
+        if source_id not in skip:
+          results.extend(_extract_S_or_T(source_rt, source_id, lines, lines_idx,
+            skip, indent1, True, False))
+  return results
+
+def _extract_S_or_T(source_rt, source_id, lines, lines_idx, skip, indent,
+                    follow_D, climb_VC):
+  uline = lines[lines_idx[source_rt][source_id]['line']]
+  skip.append(source_id)
+  results = [indent + uline]
+  line = parsed_line(uline)
   document_id_dt = SPEC["external_resource::external_resource_link"]
   document_id = document_id_dt.encode(line['document_id'])
-  results = [indent+uline]
-  indent0 = indent+"  "
-  indent1 = indent0+"  "
-  if show_D:
-    results.append(indent0 + lines[lines_idx['D'][document_id]['line']])
-  for rt in ['V', 'C']:
-    for line_id in lines_idx['S'][snippet_id]['from'][rt]:
-      results.append(indent0+lines[lines_idx[rt][line_id]['line']])
-      stack = [(ln, indent1) for ln in lines_idx[rt][line_id]['to']['G']]
-      while len(stack) > 0:
-        group2_id, indent2 = stack.pop()
-        results.append(indent2 + lines[lines_idx['G'][group2_id]['line']])
-        stack.extend([(ln, indent2+"  ") \
-            for ln in lines_idx['G'][group2_id]['to']['G']])
-      # get the a lines:
-      for attr_id in lines_idx[rt][line_id]['to']['A']:
-        results.append(indent1 + lines[lines_idx['A'][attr_id]['line']])
-        # get the U lines from A:
-        indent2 = indent1 + "  "
-        for unit_id in lines_idx['A'][attr_id]['to']['U']:
-          results.append(indent2 + lines[lines_idx['U'][unit_id]['line']])
-          for model_lineno in lines_idx['U'][unit_id]['to']['M']:
-            results.append(indent2 + "  " + lines[model_lineno])
-          stack = [(ln, indent2) for ln in lines_idx['U'][unit_id]['to']['U']]
-          while len(stack) > 0:
-            unit2_id, indent3 = stack.pop()
-            results.append(indent3 + lines[lines_idx['U'][unit2_id]['line']])
-            stack.extend([(ln, indent3 + "  ") \
-                for ln in lines_idx['U'][unit2_id]['to']['U']])
-            for model_lineno in lines_idx['U'][unit2_id]['to']['M']:
-              results.append(indent3 + "  " + lines[model_lineno])
+  indent1 = indent + "  "
+  if follow_D:
+    if document_id not in skip:
+      results.extend(_extract_D(document_id, lines, lines_idx, skip,
+                                indent1, False))
+  if climb_VC:
+    for rt in ['V', 'C']:
+      for line_id in lines_idx[source_rt][source_id]['ref_by'][rt]:
+        if line_id not in skip:
+          results.extend(_extract_V_or_C(rt, line_id, lines, lines_idx, skip,
+            indent1, True, None, True, None, False))
   return results
 
-# missing T
-def extract_D(document_id, fname):
-  lines, lines_idx = lines_index(fname)
-  uline = lines[lines_idx['D'][document_id]['line']]
-  results = [uline]
-  for source_id in lines_idx['D'][document_id]['from']['S']:
-    results += _extract_S(source_id, fname, lines, lines_idx, "  ", False)
+def _extract_A(attr_id, lines, lines_idx, skip, indent,
+               follow_U, exclude_U_id, climb_VC):
+  results = [indent + lines[lines_idx['A'][attr_id]['line']]]
+  skip.append(attr_id)
+  indent1 = indent + "  "
+  if follow_U:
+    for unit_id in lines_idx['A'][attr_id]['refs']['U']:
+      if unit_id != exclude_U_id and unit_id not in skip:
+        results.extend(_extract_U(unit_id, lines, lines_idx, skip, indent1,
+                                  True, False, exclude_U_id, True, False))
+  if climb_VC:
+    for rt in ['V', 'C']:
+      for line_id in lines_idx['A'][attr_id]['ref_by'][rt]:
+        if line_id not in skip:
+          results.extend(_extract_V_or_C(rt, line_id, lines, lines_idx, skip,
+            indent1, True, None, True, attr_id, True))
   return results
 
-def extract_S(snippet_id, fname):
+def _extract_recursively(rt, line_id, lines, lines_idx, skip, indent,
+                         follow_M, exclude_id, direction):
+  results = []
+  stack = [(ln, indent+"  ") for ln in lines_idx[rt][line_id][direction][rt]]
+  while len(stack) > 0:
+    line2_id, indent2 = stack.pop()
+    if line2_id not in skip:
+      results.append(indent2 + lines[lines_idx[rt][line2_id]['line']])
+      skip.append(line2_id)
+      if follow_M:
+        for model_lineno in lines_idx[rt][line2_id][direction]['M']:
+          results.append(indent2 + "  " + lines[model_lineno])
+      for line3_id in lines_idx[rt][line2_id][direction][rt]:
+        if line3_id not in skip and line3_id != exclude_id:
+          stack.append((line3_id, indent2 + "  "))
+  return results
+
+def _extract_U(unit_id, lines, lines_idx, skip, indent,
+               follow_U, climb_U, exclude_U_id, follow_M, climb_A):
+  results = [indent + lines[lines_idx['U'][unit_id]['line']]]
+  skip.append(unit_id)
+  if follow_M:
+    for model_lineno in lines_idx['U'][unit_id]['refs']['M']:
+      results.append(indent + "  " + lines[model_lineno])
+  if follow_U:
+    results.extend(_extract_recursively('U', unit_id, lines, lines_idx, skip,
+                     indent, follow_M, exclude_U_id, 'refs'))
+  if climb_U:
+    results.extend(_extract_recursively('U', unit_id, lines, lines_idx, skip,
+                     indent, follow_M, exclude_U_id, 'ref_by'))
+  if climb_A:
+    for attr_id in lines_idx['U'][unit_id]['ref_by']['A']:
+      if attr_id not in skip:
+        results.extend(_extract_A(attr_id, lines, lines_idx, skip, indent+"  ",
+          True, unit_id, True))
+  return results
+
+def _extract_G(group_id, lines, lines_idx, skip, indent,
+               follow_G, climb_G, exclude_G_id, climb_VC):
+  results = [indent + lines[lines_idx['G'][group_id]['line']]]
+  skip.append(group_id)
+  indent1 = indent + "  "
+  if follow_G:
+    results.extend(_extract_recursively('G', group_id, lines, lines_idx, skip,
+                     indent1, False, exclude_G_id, 'refs'))
+  if climb_G:
+    results.extend(_extract_recursively('G', group_id, lines, lines_idx, skip,
+                     indent1, False, exclude_G_id, 'ref_by'))
+  if climb_VC:
+    for rt in ['V', 'C']:
+      for line_id in lines_idx['G'][group_id]['ref_by'][rt]:
+        if line_id not in skip:
+          results.extend(_extract_V_or_C(rt, line_id, lines, lines_idx, skip,
+            indent1, False, group_id, True, None, True))
+  return results
+
+def _extract_D(document_id, lines, lines_idx, skip, indent, climb_ST):
+  results = [indent + lines[lines_idx['D'][document_id]['line']]]
+  skip.append(document_id)
+  if climb_ST:
+    for source_rt in ['S', 'T']:
+      for source_id in lines_idx['D'][document_id]['ref_by'][source_rt]:
+        if source_id not in skip:
+          results += _extract_S_or_T(source_rt, source_id, lines,
+              lines_idx, skip, indent + "  ", False, True)
+  return results
+
+def extract(line_id, fname):
   lines, lines_idx = lines_index(fname)
-  return _extract_S(snippet_id, fname, lines, lines_idx, "", True)
-
-# T same as S
-
-# G -> (V & C)
-#      -> G wo g0 (recursive)
-#      -> A --> U (recursive) --> M
-#      -> (S,T) --> D
-
-# A -> (V & C)
-#      -> G (recursive)
-#      -> A wo A0 --> U (recursive) --> M
-#      -> (S,T) --> D
-
-# U ->
-#      -> M
-#      -> U (recursive)
-#      -> A
-#         --> C, V
-#           --> (S,T) --> D
-#      -> G (recursive)
-
-# C, V:
-#     -> A
-#        --> G (recursive)
-#        --> U (recursive) --> M
-#        --> (S,T) --> D
+  if line_id in lines_idx['D']:
+    return _extract_D(line_id, lines, lines_idx, [],
+                      "", True)
+  elif line_id in lines_idx['S']:
+    return _extract_S_or_T('S', line_id, lines, lines_idx, [],
+                           "", True, True)
+  elif line_id in lines_idx['T']:
+    return _extract_S_or_T('T', line_id, lines, lines_idx, [],
+                           "", True, True)
+  elif line_id in lines_idx['G']:
+    return _extract_G(line_id, lines, lines_idx, [],
+                      "", True, True, None, True)
+  elif line_id in lines_idx['A']:
+    return _extract_A(line_id, lines, lines_idx, [],
+                      "", True, None, True)
+  elif line_id in lines_idx['U']:
+    return _extract_U(line_id, lines, lines_idx, [],
+                      "", True, True, line_id, True,
+        True)
+  elif line_id in lines_idx['V']:
+    return _extract_V_or_C('V', line_id, lines, lines_idx, [],
+                           "", True, None, True, None, True)
+  elif line_id in lines_idx['C']:
+    return _extract_V_or_C('C', line_id, lines, lines_idx, [],
+                           "", True, None, True, None, True)
+  raise ValueError("Unknown line ID: " + line_id)
 
 def statistics(fname, stats = None):
   lines = collect_lines_with_id(fname)
