@@ -31,7 +31,7 @@ def _find_G_parents(line):
   parent_groups = []
   if line['type'] == 'combined' or line['type'] == 'inverted':
     parent_groups.extend(re.findall(r"[a-zA-Z0-9_]+", line["definition"]))
-  m = re.match(r'^derived:([a-zA-Z0-9_]):.*', line['definition'])
+  m = re.match(r'^derived:([a-zA-Z0-9_]+):.*', line['definition'])
   if m:
     parent_groups.append(m.group(1))
   return parent_groups
@@ -39,7 +39,7 @@ def _find_G_parents(line):
 def _find_U_parents(line):
   parent_units = []
   if line['type'].startswith('homolog_'):
-    m = re.match(r'^homolog:([a-zA-Z0-9_])', line['definition'])
+    m = re.match(r'^homolog:([a-zA-Z0-9_]+)', line['definition'])
     if m:
       parent_units.append(m.group(1))
   elif line['type'] == 'set!:arrangement':
