@@ -24,7 +24,7 @@ def main(args):
   egcfile = args['<egcfile>']
   first_line = True
   try:
-    for line in egctools.egctools.extract(args['<id>'], egcfile,
+    for line in egctools.extractor.extract(args['<id>'], egcfile,
         args['--indented'], args['--numbers']):
       if args['--spaced'] and not first_line:
         print()

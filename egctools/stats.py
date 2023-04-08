@@ -1,7 +1,7 @@
 from collections import defaultdict
 import re
 import importlib.resources
-from .egctools import parsed_lines
+from .parser import parsed_lines
 from jinja2 import Environment, FileSystemLoader
 _data = importlib.resources.files("egctools").joinpath("data")
 STATS_REPORT_TEMPLATE = "stats_report.j2"

@@ -1,127 +1,11 @@
 import textformats
-from collections import defaultdict
-import re
 import importlib.resources
+from .index import create as create_index
+from .parser import parsed_line
 _data = importlib.resources.files("egctools").joinpath("data")
 _egcspec = _data.joinpath("egc-spec")
 _specfile = _egcspec.joinpath("egc.tf.yaml")
 SPEC = textformats.Specification(str(_specfile))
-
-def parsed_line(s):
-  elements = SPEC["line"].decode(s.rstrip("\n"))
-  return elements
-
-def encode_line(data):
-  return SPEC["line"].encode(data)
-
-def parsed_lines(fname):
-  for line in open(fname):
-    yield parsed_line(line)
-
-def unparsed_and_parsed_lines(fname):
-  for line in open(fname):
-    yield (line.rstrip("\n"), parsed_line(line))
-
-def _find_G_parents(line):
-  parent_groups = []
-  if line['type'] == 'combined' or line['type'] == 'inverted':
-    parent_groups.extend(re.findall(r"[a-zA-Z0-9_]+", line["definition"]))
-  m = re.match(r'^derived:([a-zA-Z0-9_]+):.*', line['definition'])
-  if m:
-    parent_groups.append(m.group(1))
-  return parent_groups
-
-def _find_U_parents(line):
-  parent_units = []
-  if line['type'].startswith('homolog_'):
-    m = re.match(r'^homolog:([a-zA-Z0-9_]+)', line['definition'])
-    if m:
-      parent_units.append(m.group(1))
-  elif line['type'] == 'set!:arrangement':
-    parts = line['definition'].split(',')
-    for part in parts:
-      m = re.match(r'^([a-zA-Z0-9_]+)$', part)
-      if m:
-        parent_units.append(m.group(1))
-  elif line['type'].startswith('*') or line['type'].startswith('set!:'):
-    parent_units = re.findall(r"[a-zA-Z0-9_]+", line["definition"])
-  return parent_units
-
-def _find_A_units(line):
-  units = [line['unit_id']]
-  if isinstance(line['mode'], dict) and 'reference' in line['mode']:
-    units.append(line['mode']['reference'])
-  return units
-
-def _find_VC_sources(line):
-  if isinstance(line['source'], list):
-    return line['source']
-  else:
-    return [line['source']]
-
-def _find_VC_attributes(line):
-  if isinstance(line['attribute'], dict):
-    return [line['attribute']['id1'], line['attribute']['id2']]
-  else:
-    return [line['attribute']]
-
-def _find_VC_groups(line):
-  if 'group' in line:
-    return [line['group']['id']]
-  else:
-    return [line['group1']['id'], line['group2']['id']]
-
-def _connect(lines_idx, rt1, id1, rt2, id2):
-  lines_idx[rt1][id1]['refs'][rt2].append(id2)
-  lines_idx[rt2][id2]['ref_by'][rt1].append(id1)
-
-def lines_index(fname):
-  lines = []
-  lines_idx = defaultdict(\
-                lambda: defaultdict(\
-                  lambda: {'line': None,
-                           'ref_by': defaultdict(list),
-                           'refs': defaultdict(list)}))
-  i = 0
-  for uline, line in unparsed_and_parsed_lines(fname):
-    lines.append(uline)
-    rt = line['record_type']
-    if 'id' in line:
-      line_id = line['id']
-      lines_idx[rt][line_id]['line'] = i
-    if 'document_id' in line:
-      document_id_dt = SPEC["external_resource::external_resource_link"]
-      document_id = document_id_dt.encode(line['document_id'])
-    if rt == 'D':
-      lines_idx["D"][document_id]['line'] = i
-    elif rt == 'S' or rt == 'T':
-      _connect(lines_idx, rt, line_id, 'D', document_id)
-    elif rt == 'G':
-      for parent_id in _find_G_parents(line):
-        _connect(lines_idx, 'G', line_id, 'G', parent_id)
-    elif rt == 'U':
-      for parent_id in _find_U_parents(line):
-        _connect(lines_idx, 'U', line_id, 'U', parent_id)
-    elif rt == 'A':
-      for unit_id in _find_A_units(line):
-        _connect(lines_idx, 'A', line_id, 'U', unit_id)
-    elif rt == 'M':
-      lines_idx['U'][line['unit_id']]['ref_by']['M'].append(i)
-    elif rt == 'V' or rt == 'C':
-      for source_id in _find_VC_sources(line):
-        lines_idx['S_or_T'][source_id]['ref_by'][rt].append(line_id)
-      for attribute_id in _find_VC_attributes(line):
-        _connect(lines_idx, rt, line_id, 'A', attribute_id)
-      for group_id in _find_VC_groups(line):
-        _connect(lines_idx, rt, line_id, 'G', group_id)
-    i += 1
-  for source_id in lines_idx['S_or_T'].keys():
-    for rt2 in lines_idx['S_or_T'][source_id]['ref_by']:
-      for line_id in lines_idx['S_or_T'][source_id]['ref_by'][rt2]:
-        rt = 'S' if source_id in lines_idx['S'] else 'T'
-        _connect(lines_idx, rt2, line_id, rt, source_id)
-  del lines_idx['S_or_T']
-  return lines, lines_idx
 
 def _extract_V_or_C(rule_rt, rule_id, lines, lines_idx, skip, indent, indented,
                     numbered, follow_G, exclude_G_id, follow_A, exclude_A_id,
@@ -273,7 +157,7 @@ def _extract_D(document_id, lines, lines_idx, skip, indent, indented, numbered,
   return results
 
 def extract(line_id, fname, indented, numbered):
-  lines, lines_idx = lines_index(fname)
+  lines, lines_idx = create_index(fname)
   if line_id in lines_idx['D']:
     return _extract_D(line_id, lines, lines_idx, [],
                       "", indented, numbered, True)
@@ -300,35 +184,3 @@ def extract(line_id, fname, indented, numbered):
     return _extract_V_or_C('C', line_id, lines, lines_idx, [],
                            "", indented, numbered, True, None, True, None, True)
   raise ValueError("Unknown line ID: " + line_id)
-
-from jinja2 import Environment, FileSystemLoader
-
-# from https://stackoverflow.com/questions/16259923/
-#       how-can-i-escape-latex-special-characters-inside-django-templates
-def tex_escape(text):
-    conv = {
-        '&': r'\&',
-        '%': r'\%',
-        '$': r'\$',
-        '#': r'\#',
-        '_': r'\_',
-        '{': r'\{',
-        '}': r'\}',
-        '~': r'\textasciitilde{}',
-        '^': r'\^{}',
-        '\\': r'\textbackslash{}',
-        '<': r'\textless{}',
-        '>': r'\textgreater{}',
-    }
-    regex = re.compile('|'.join(re.escape(str(key)) for
-      key in sorted(conv.keys(), key = lambda item: - len(item))))
-    return regex.sub(lambda match: conv[match.group()], text)
-
-def table(s, fmt, name, **params):
-  env = Environment(loader=FileSystemLoader(str(_data)))
-  env.filters["texesc"] = tex_escape
-  template_filename = f"{fmt}_table_{name}.j2"
-  template = env.get_template(template_filename)
-  render_params = s.copy()
-  render_params.update(params)
-  return template.render(render_params)

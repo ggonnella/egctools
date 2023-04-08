@@ -24,11 +24,11 @@ from docopt import docopt
 
 def main(args):
   egcfiles = args['<egcfile>']
-  s = None
+  egcstats = None
   for egcfile in egcfiles:
-    s=egctools.egctools.statistics(egcfile, s)
+    egcstats=egctools.stats.collect(egcfile, egcstats)
   if args['G_by_type']:
-    print(egctools.egctools.table(s, args["--format"],
+    print(egctools.table.create(egcstats, args["--format"],
              "G_by_type", selected_gtype=args["<type>"]))
 
 if __name__ == '__main__':
