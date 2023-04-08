@@ -19,10 +19,10 @@ from docopt import docopt
 
 def main(args):
   egcfiles = args['<egcfile>']
-  s = None
+  egcstats = None
   for egcfile in egcfiles:
-    s=egctools.egctools.statistics(egcfile, s)
-  print(egctools.egctools.stats_report(s))
+    egcstats=egctools.stats.collect(egcfile, egcstats)
+  print(egctools.stats.report(egcstats))
 
 if __name__ == '__main__':
   args = docopt(__doc__, version=egctools.__version__)
