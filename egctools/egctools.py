@@ -11,6 +11,9 @@ def parsed_line(s):
   elements = SPEC["line"].decode(s.rstrip("\n"))
   return elements
 
+def encode_line(data):
+  return SPEC["line"].encode(data)
+
 def parsed_lines(fname):
   for line in open(fname):
     yield parsed_line(line)
