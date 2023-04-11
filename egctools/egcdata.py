@@ -10,7 +10,7 @@ class EGCData:
 
     @staticmethod
     def compute_docid_from_pfx_and_item(pfx, item):
-      return '.'.join(['D', pfx, item])
+      return '-'.join(['D', pfx, item])
 
     @staticmethod
     def compute_docid(record):
@@ -20,7 +20,7 @@ class EGCData:
 
     @staticmethod
     def compute_modelid(record):
-      return '.'.join(['M', record['unit_id'], record['resource_id'],
+      return '-'.join(['M', record['unit_id'], record['resource_id'],
                       record['model_id']])
 
     @staticmethod
@@ -244,8 +244,16 @@ class EGCData:
     def id_exists(self, record_id):
       return record_id in self.id2rnum
 
-    def refs(self, rt, record_id, ref_rt):
+    def refs_ids(self, rt, record_id, ref_rt):
       return self.graph[rt][record_id]['refs'][ref_rt]
 
-    def ref_by(self, rt, record_id, ref_by_rt):
+    def ref_by_ids(self, rt, record_id, ref_by_rt):
       return self.graph[rt][record_id]['ref_by'][ref_by_rt]
+
+    def refs(self, rt, record_id, ref_rt):
+      return [self.get_record_by_id(ref_id) \
+          for ref_id in self.refs_ids(rt, record_id, ref_rt)]
+
+    def ref_by(self, rt, record_id, ref_by_rt):
+      return [self.get_record_by_id(ref_by_id) \
+          for ref_by_id in self.ref_by_ids(rt, record_id, ref_by_rt)]
