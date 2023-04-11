@@ -19,9 +19,13 @@ class EGCData:
                             record['document_id']['item'])
 
     @staticmethod
+    def compute_modelid_from_data(unit_id, resource_id, model_id):
+      return '-'.join(['M', unit_id, resource_id, model_id])
+
+    @staticmethod
     def compute_modelid(record):
-      return '-'.join(['M', record['unit_id'], record['resource_id'],
-                      record['model_id']])
+      return EGCData.compute_modelid_from_data(\
+          record['unit_id'], record['resource_id'], record['model_id'])
 
     @staticmethod
     def compute_id(record):
@@ -221,9 +225,6 @@ class EGCData:
 
     def get_records(self, record_type):
       return [self.records[i] for i in self.rt2rnums[record_type]]
-
-    def get_extracts(self):
-      return self.get_records('S') + self.get_records('T')
 
     def get_record_by_id(self, record_id):
       record_num = self.id2rnum[record_id]
