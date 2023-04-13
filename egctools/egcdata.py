@@ -216,7 +216,7 @@ class EGCData:
       self.lines[record_num] = encode_line(updated_data)
       record_type = updated_data["record_type"]
       self._disconnect(record_type, existing_id)
-      self._graph_add_record(updated_id, updated_data, False)
+      self._graph_add_record(updated_id, updated_data, True)
       self.save_data()
 
     def update_record(self, existing_data, updated_data):
