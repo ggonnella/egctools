@@ -29,6 +29,10 @@ def get_U_to_U(line):
         parent_units.append(m.group(1))
   elif line['type'].startswith('*') or line['type'].startswith('set!:'):
     parent_units = re.findall(r"[a-zA-Z0-9_]+", line["definition"])
+  elif line['definition'].startswith('derived:'):
+    m = re.match(r'^derived:([a-zA-Z0-9_]+):.*', line['definition'])
+    if m:
+      parent_units.append(m.group(1))
   return parent_units
 
 def get_A_to_U(line):
