@@ -40,7 +40,18 @@ class EGCData:
       self.graph[rt1][id1]['refs'][rt2].append(id2)
       self.graph[rt2][id2]['ref_by'][rt1].append(id1)
 
-    def _disconnect(self, rt, record_id):
+    def is_ref_by(self, record_id):
+      record = self.records[self.id2rnum[record_id]]
+      rt = record['record_type']
+      if rt in self.graph:
+        if record_id in self.graph[rt]:
+          if 'ref_by' in self.graph[rt][record_id]:
+            for rt2 in self.graph[rt][record_id]['ref_by']:
+              if self.graph[rt][record_id]['ref_by'][rt2]:
+                return True
+      return False
+
+    def _disconnect(self, rt, record_id, keep_ref_by = False):
       if rt in self.graph:
         if record_id in self.graph[rt]:
           if 'refs' in self.graph[rt][record_id]:
@@ -49,13 +60,14 @@ class EGCData:
                 if 'ref_by' in self.graph[rt2][id2]:
                   if record_id in self.graph[rt2][id2]['ref_by'][rt]:
                     self.graph[rt2][id2]['ref_by'][rt].remove(record_id)
-          if 'ref_by' in self.graph[rt][record_id]:
-            for rt2, id2s in self.graph[rt][record_id]['ref_by'].items():
-              for id2 in id2s:
-                if 'refs' in self.graph[rt][record_id]:
-                  if record_id in self.graph[rt2][id2]['refs'][rt]:
-                    self.graph[rt2][id2]['refs'][rt].remove(record_id)
-          del self.graph[rt][record_id]
+          if not keep_ref_by:
+            if 'ref_by' in self.graph[rt][record_id]:
+              for rt2, id2s in self.graph[rt][record_id]['ref_by'].items():
+                for id2 in id2s:
+                  if 'refs' in self.graph[rt][record_id]:
+                    if record_id in self.graph[rt2][id2]['refs'][rt]:
+                      self.graph[rt2][id2]['refs'][rt].remove(record_id)
+            del self.graph[rt][record_id]
 
     def _graph_add_S(self, record_id, record):
       document_id = self.compute_docid(record)
@@ -207,6 +219,9 @@ class EGCData:
           raise ValueError('Record does not exist: {}'.format(existing_id))
       record_num = self.id2rnum[existing_id]
       updated_id = self.compute_id(updated_data)
+      from icecream import ic
+      ic(updated_id)
+      ic(existing_id)
       if updated_id != existing_id:
           if updated_id in self.id2rnum:
               raise ValueError('Record already exists: {}'.format(updated_id))
@@ -215,7 +230,7 @@ class EGCData:
       self.records[record_num] = updated_data
       self.lines[record_num] = encode_line(updated_data)
       record_type = updated_data["record_type"]
-      self._disconnect(record_type, existing_id)
+      self._disconnect(record_type, existing_id, updated_id == existing_id)
       self._graph_add_record(updated_id, updated_data, True)
       self.save_data()
 
