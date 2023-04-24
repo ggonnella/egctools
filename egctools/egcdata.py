@@ -219,9 +219,6 @@ class EGCData:
           raise ValueError('Record does not exist: {}'.format(existing_id))
       record_num = self.id2rnum[existing_id]
       updated_id = self.compute_id(updated_data)
-      from icecream import ic
-      ic(updated_id)
-      ic(existing_id)
       if updated_id != existing_id:
           if updated_id in self.id2rnum:
               raise ValueError('Record already exists: {}'.format(updated_id))
