@@ -3,10 +3,19 @@ import hashlib
 import shutil
 from .parser import unparsed_and_parsed_lines, encode_line
 from .references import get_G_to_G, get_U_to_U, get_A_to_U, get_VC_to_ST, \
-                        get_VC_to_A, get_VC_to_G
+                        get_VC_to_A, get_VC_to_G, update_G_in_G, \
+                        update_G_in_VC, update_U_in_U, update_U_in_A, \
+                        update_U_in_M, update_ST_in_VC, update_A_in_VC
 from collections import defaultdict
 
 class EGCData:
+
+    @staticmethod
+    def parse_docid(docid):
+      parts = docid.split('-', 2)
+      assert len(parts) == 3
+      assert parts[0] == 'D'
+      return parts[1], parts[2]
 
     @staticmethod
     def compute_docid_from_pfx_and_item(pfx, item):
@@ -51,7 +60,44 @@ class EGCData:
                 return True
       return False
 
-    def _disconnect(self, rt, record_id, keep_ref_by = False):
+    def _update_reference(self, record_id, record_type,
+                          ref_type, ref_old_id, ref_new_id):
+      record_num = self.id2rnum[record_id]
+      record = self.records[record_num]
+      if ref_type == 'U':
+        if record_type == 'U':
+          update_U_in_U(record, ref_old_id, ref_new_id)
+        elif record_type == 'A':
+          update_U_in_A(record, ref_old_id, ref_new_id)
+        elif record_type == 'M':
+          update_U_in_M(record, ref_old_id, ref_new_id)
+        else:
+          assert False
+      elif ref_type in ['S', 'T']:
+        if record_type in ['V', 'C']:
+          update_ST_in_VC(record, ref_old_id, ref_new_id)
+        else:
+          assert False
+      elif ref_type == 'A':
+        if record_type in ['V', 'C']:
+          update_A_in_VC(record, ref_old_id, ref_new_id)
+        else:
+          assert False
+      elif ref_type == 'G':
+        if record_type in ['V', 'C']:
+          update_G_in_VC(record, ref_old_id, ref_new_id)
+        elif record_type == 'G':
+          update_G_in_G(record, ref_old_id, ref_new_id)
+        else:
+          assert False
+      elif ref_type == 'D':
+        assert record_type in ['S', 'T']
+        pfx, item = self.parse_docid(ref_new_id)
+        record['document_id']['item'] = item
+        record['document_id']['resource_prefix'] = pfx
+      self.lines[record_num] = encode_line(record)
+
+    def _disconnect(self, rt, record_id, new_record_id = None):
       if rt in self.graph:
         if record_id in self.graph[rt]:
           if 'refs' in self.graph[rt][record_id]:
@@ -60,14 +106,21 @@ class EGCData:
                 if 'ref_by' in self.graph[rt2][id2]:
                   if record_id in self.graph[rt2][id2]['ref_by'][rt]:
                     self.graph[rt2][id2]['ref_by'][rt].remove(record_id)
-          if not keep_ref_by:
-            if 'ref_by' in self.graph[rt][record_id]:
-              for rt2, id2s in self.graph[rt][record_id]['ref_by'].items():
-                for id2 in id2s:
-                  if 'refs' in self.graph[rt][record_id]:
-                    if record_id in self.graph[rt2][id2]['refs'][rt]:
+          if 'ref_by' in self.graph[rt][record_id]:
+            for rt2, id2s in self.graph[rt][record_id]['ref_by'].items():
+              for id2 in id2s:
+                if 'refs' in self.graph[rt][record_id]:
+                  if record_id in self.graph[rt2][id2]['refs'][rt]:
+                    if new_record_id != record_id:
                       self.graph[rt2][id2]['refs'][rt].remove(record_id)
-            del self.graph[rt][record_id]
+                      if new_record_id:
+                        self.graph[rt2][id2]['refs'][rt].append(new_record_id)
+                        self._update_reference(id2, rt2,
+                                               rt, record_id, new_record_id)
+            if new_record_id != record_id:
+              if new_record_id:
+                self.graph[rt][new_record_id] = self.graph[rt][record_id]
+              del self.graph[rt][record_id]
 
     def _graph_add_S(self, record_id, record):
       document_id = self.compute_docid(record)
@@ -227,7 +280,7 @@ class EGCData:
       self.records[record_num] = updated_data
       self.lines[record_num] = encode_line(updated_data)
       record_type = updated_data["record_type"]
-      self._disconnect(record_type, existing_id, updated_id == existing_id)
+      self._disconnect(record_type, existing_id, updated_id)
       self._graph_add_record(updated_id, updated_data, True)
       self.save_data()
 
