@@ -29,78 +29,86 @@ class EGCData:
 
     ## Compute/Parse IDs
 
-    - ``compute_id(record)``: Compute the ID for a record
-    - ``compute_docid_from_pfx_and_item(resource_prefix, item)``: Compute the
-      document ID for a resource prefix and item
-    - ``compute_modelid_from_data(unit_id, resource_id, model_id)``: Compute
-      the model ID for a unit ID, resource ID and model ID
-    - ``parse_docid(docid)``: Parse a document ID into a resource prefix and
-      item
+    - ``record_id(record)``: Compute the ID for a record
+    - ``compose_id(record_type, *fields)``: Compute the ID for a record
+      without an ID field
+    - ``parse_composed_id(docid)``: Parse a composed ID into its fields
 
     ## Check IDs
 
-    - ``id_exists(record_id)``: Check if a record ID exists
-    - ``is_unique_id(record_id)``: Check if a record ID is unique
-    - ``has_unique_id(record)``: Check if the record has a unique ID
+    - ``id_exists(record_id)``: Check if record with that ID already exists
+    - ``has_unique_id(record)``: Check if a not-yet-added record has a unique ID
 
     # Finding records
 
-    - ``get_record_by_id(record_id)``: Get a record by its ID
-    - ``get_records(record_type)``: Get all records of a given type
-    - ``get_record_ids(record_type)``: Get all record IDs of a given type
+    - ``find(record_id)``: Get a record by its ID
+    - ``find_all(record_type)``: Get all records of a given type
+    - ``find_all_ids(record_type)``: Get all record IDs of a given type
+
+    # Editing records
+
+    - ``create(record)``: Create a new record from record data
+    - ``update(record_id, record)``: Update a record with new data;
+      the record_type is not allowed to change
+    - ``delete(record_id)``: Delete a record by ID
 
     # References
 
-    - ``is_ref_by(record_id)``: Check if a record is referenced by other
-    - ``refs_ids(record_type, record_id, ref_type)``: Get all IDs of records
+    - ``refs_count(record_type, record_id, ref_type)``: Get number of records
       of type ``ref_type`` referenced by a record
     - ``refs(record_type, record_id, ref_type)``: Get all records of type
       ``ref_type`` referenced by a record
-    - ``ref_by_ids(record_type, record_id, ref_type)``: Get all IDs of records
+
+    - ``is_ref_by(record_id)``: Check if a record is referenced by other
+    - ``ref_by_count(record_type, record_id, ref_type)``: Get number of records
       of type ``ref_type`` referencing a record
     - ``ref_by(record_type, record_id, ref_type)``: Get all records of type
       ``ref_type`` referencing a record
 
-    # Editing records
-
-    - ``create_record(record)``: Create a new record from record data
-    - ``update_record_by_id(record_id, record)``: Update a record with new data;
-      the record_type is not allowed to change
-    - ``delete_record_by_id(record_id)``: Delete a record by ID
-
     # File handling
 
-    - ``save_data(filename)``: Save the data to a file
-    - ``save_data(filename, True)``: Save the data to a file, and create a
+    - ``save(filename)``: Save the data to a file
+    - ``save(filename, True)``: Save the data to a file, and create a
       backup of the original file; the name of the backup file is the original
       filename with an hash appended and the extension '.bak'
     """
 
     @staticmethod
-    def parse_docid(docid):
-      parts = docid.split('-', 2)
-      assert len(parts) == 3
-      assert parts[0] == 'D'
-      return parts[1], parts[2]
-
-    @staticmethod
-    def compute_docid_from_pfx_and_item(pfx, item):
-      return '-'.join(['D', pfx, item])
+    def parse_composed_id(record_id):
+      if record_id.startswith('D-'):
+        parts = record_id.split('-', 2)
+        if len(parts) != 3:
+          raise ValueError('Invalid document ID: {}'.format(record_id))
+        return parts[1], parts[2]
+      elif record_id.startswith('M-'):
+        parts = record_id.split('-', 3)
+        if len(parts) != 4:
+          raise ValueError('Invalid model ID: {}'.format(record_id))
+        return parts[1], parts[2], parts[3]
+      else:
+        raise ValueError('Invalid composed ID: {}'.format(record_id))
 
     @staticmethod
     def compute_docid(record):
-      return EGCData.compute_docid_from_pfx_and_item(\
-                            record['document_id']['resource_prefix'],
-                            record['document_id']['item'])
-
-    @staticmethod
-    def compute_modelid_from_data(unit_id, resource_id, model_id):
-      return '-'.join(['M', unit_id, resource_id, model_id])
+      return EGCData.compose_id("D", record['document_id']['resource_prefix'],
+                                record['document_id']['item'])
 
     @staticmethod
     def compute_modelid(record):
-      return EGCData.compute_modelid_from_data(\
+      return EGCData.compose_id("M",\
           record['unit_id'], record['resource_id'], record['model_id'])
+
+    @staticmethod
+    def compose_id(record_type, *id_fields):
+      types = {"M": 3, "D": 2}
+      if record_type not in types:
+        raise ValueError("Unknown record type for composing ID: {}".\
+            format(record_type))
+      if len(id_fields) != types[record_type]:
+        raise ValueError("Wrong number of ID fields for composing an ID of"+\
+            "a record of type {}: {}".\
+            format(record_type, len(id_fields)))
+      return '-'.join([record_type]+id_fields)
 
     @staticmethod
     def compute_id(record):
@@ -114,17 +122,6 @@ class EGCData:
     def _connect(self, rt1, id1, rt2, id2):
       self.graph[rt1][id1]['refs'][rt2].append(id2)
       self.graph[rt2][id2]['ref_by'][rt1].append(id1)
-
-    def is_ref_by(self, record_id):
-      record = self.records[self.id2rnum[record_id]]
-      rt = record['record_type']
-      if rt in self.graph:
-        if record_id in self.graph[rt]:
-          if 'ref_by' in self.graph[rt][record_id]:
-            for rt2 in self.graph[rt][record_id]['ref_by']:
-              if self.graph[rt][record_id]['ref_by'][rt2]:
-                return True
-      return False
 
     def _update_reference(self, record_id, record_type,
                           ref_type, ref_old_id, ref_new_id):
@@ -158,7 +155,7 @@ class EGCData:
           assert False
       elif ref_type == 'D':
         assert record_type in ['S', 'T']
-        pfx, item = self.parse_docid(ref_new_id)
+        pfx, item = self.parse_composed_id(ref_new_id)
         record['document_id']['item'] = item
         record['document_id']['resource_prefix'] = pfx
       self.lines[record_num] = encode_line(record)
@@ -293,7 +290,7 @@ class EGCData:
         backup_file_path = f"{file_path}.{hash_prefix}.bak"
         return backup_file_path
 
-    def save_data(self, backup=False):
+    def save(self, backup=False):
       if backup:
         backup_file_path = EGCData._get_backup_file_path(self.file_path)
         if not os.path.exists(backup_file_path):
@@ -304,7 +301,7 @@ class EGCData:
           if line is not None:
             f.write(line + "\n")
 
-    def create_record(self, record_data):
+    def create(self, record_data):
       record_id = self.compute_id(record_data)
       if record_id in self.id2rnum:
           raise ValueError('Record already exists: {}'.format(record_id))
@@ -315,9 +312,8 @@ class EGCData:
       rt = record_data["record_type"]
       self.rt2rnums[rt].append(record_num)
       self._graph_add_record(record_id, record_data, True)
-      self.save_data()
 
-    def delete_record_by_id(self, record_id):
+    def delete(self, record_id):
       if record_id not in self.id2rnum:
           raise ValueError('Record does not exist: {}'.format(record_id))
       record_num = self.id2rnum[record_id]
@@ -327,20 +323,15 @@ class EGCData:
       self.lines[record_num] = None
       self._disconnect(record_type, record_id)
       del self.id2rnum[record_id]
-      self.save_data()
 
-    def delete_record(self, record):
-      record_id = self.compute_id(record)
-      self.delete_record_by_id(record_id)
-
-    def update_record_by_id(self, existing_id, updated_data):
+    def update(self, existing_id, updated_data):
       if existing_id not in self.id2rnum:
           raise ValueError('Record does not exist: {}'.format(existing_id))
       record_num = self.id2rnum[existing_id]
       record_type = self.records[record_num]["record_type"]
       if record_type != updated_data["record_type"]:
           raise ValueError('Record type cannot be changed')
-      updated_id = self.compute_id(updated_data)
+      updated_id = self.record_id(updated_data)
       if updated_id != existing_id:
           if updated_id in self.id2rnum:
               raise ValueError('Record already exists: {}'.format(updated_id))
@@ -351,48 +342,58 @@ class EGCData:
       record_type = updated_data["record_type"]
       self._disconnect(record_type, existing_id, updated_id)
       self._graph_add_record(updated_id, updated_data, True)
-      self.save_data()
 
-    def update_record(self, existing_data, updated_data):
-      record_id = self.compute_id(existing_data)
-      self.update_record_by_id(record_id, updated_data)
-
-    def get_records(self, record_type):
+    def find_all(self, record_type):
       return [self.records[i] for i in self.rt2rnums[record_type]]
 
-    def get_record_ids(self, record_type):
-      return [self.compute_id(self.records[i]) \
+    def find_all_ids(self, record_type):
+      return [self.record_id(self.records[i]) \
           for i in self.rt2rnums[record_type]]
 
-    def get_record_by_id(self, record_id):
+    def find(self, record_id):
       record_num = self.id2rnum[record_id]
       if record_num is None:
         raise ValueError('Record does not exist: {}'.format(record_id))
       return self.records[record_num]
 
     def get_record(self, record_data):
-      record_id = self.compute_id(record_data)
-      return self.get_record_by_id(record_id)
+      record_id = self.record_id(record_data)
+      return self.find(record_id)
 
     def has_unique_id(self, record):
-      return self.compute_id(record) not in self.id2rnum
-
-    def is_unique_id(self, record_id):
-      return record_id not in self.id2rnum
+      return self.record_id(record) not in self.id2rnum
 
     def id_exists(self, record_id):
       return record_id in self.id2rnum
 
-    def refs_ids(self, rt, record_id, ref_rt):
+    def _refs_ids(self, rt, record_id, ref_rt):
       return self.graph[rt][record_id]['refs'][ref_rt]
 
-    def ref_by_ids(self, rt, record_id, ref_by_rt):
+    def _ref_by_ids(self, rt, record_id, ref_by_rt):
       return self.graph[rt][record_id]['ref_by'][ref_by_rt]
 
     def refs(self, rt, record_id, ref_rt):
-      return [self.get_record_by_id(ref_id) \
-          for ref_id in self.refs_ids(rt, record_id, ref_rt)]
+      return [self.find(ref_id) \
+          for ref_id in self._refs_ids(rt, record_id, ref_rt)]
+
+    def refs_count(self, rt, record_id, ref_rt):
+      return len(self._refs_ids(rt, record_id, ref_rt))
 
     def ref_by(self, rt, record_id, ref_by_rt):
-      return [self.get_record_by_id(ref_by_id) \
-          for ref_by_id in self.ref_by_ids(rt, record_id, ref_by_rt)]
+      return [self.find(ref_by_id) \
+          for ref_by_id in self._ref_by_ids(rt, record_id, ref_by_rt)]
+
+    def ref_by_count(self, rt, record_id, ref_by_rt):
+      return len(self._ref_by_ids(rt, record_id, ref_by_rt))
+
+    def is_ref_by(self, record_id):
+      record = self.records[self.id2rnum[record_id]]
+      rt = record['record_type']
+      if rt in self.graph:
+        if record_id in self.graph[rt]:
+          if 'ref_by' in self.graph[rt][record_id]:
+            for rt2 in self.graph[rt][record_id]['ref_by']:
+              if self.graph[rt][record_id]['ref_by'][rt2]:
+                return True
+      return False
+
