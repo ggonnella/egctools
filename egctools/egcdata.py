@@ -134,6 +134,13 @@ class EGCData:
           update_U_in_A(record, ref_old_id, ref_new_id)
         elif record_type == 'M':
           update_U_in_M(record, ref_old_id, ref_new_id)
+          new_M_id = self.record_id(record)
+          self.id2rnum[new_M_id] = self.id2rnum[record_id]
+          del self.id2rnum[record_id]
+          self.graph['M'][new_M_id] = self.graph['M'][record_id]
+          del self.graph['M'][record_id]
+          self.graph['U'][ref_old_id]['ref_by']['M'].remove(record_id)
+          self.graph['U'][ref_old_id]['ref_by']['M'].append(new_M_id)
         else:
           assert False
       elif ref_type in ['S', 'T']:
@@ -159,31 +166,40 @@ class EGCData:
         record['document_id']['item'] = item
         record['document_id']['resource_prefix'] = pfx
       self.lines[record_num] = encode_line(record)
+      return self.record_id(record)
 
-    def _disconnect(self, rt, record_id, new_record_id = None):
-      if rt in self.graph:
-        if record_id in self.graph[rt]:
+    def _disconnect(self, rt, record_id):
+      for rt2, id2s in self.graph[rt][record_id]['refs'].items():
+        for id2 in id2s:
+          if 'ref_by' in self.graph[rt2][id2]:
+            if record_id in self.graph[rt2][id2]['ref_by'][rt]:
+              self.graph[rt2][id2]['ref_by'][rt].remove(record_id)
+      for rt2, id2s in self.graph[rt][record_id]['ref_by'].items():
+        for id2 in id2s:
           if 'refs' in self.graph[rt][record_id]:
-            for rt2, id2s in self.graph[rt][record_id]['refs'].items():
-              for id2 in id2s:
-                if 'ref_by' in self.graph[rt2][id2]:
-                  if record_id in self.graph[rt2][id2]['ref_by'][rt]:
-                    self.graph[rt2][id2]['ref_by'][rt].remove(record_id)
-          if 'ref_by' in self.graph[rt][record_id]:
-            for rt2, id2s in self.graph[rt][record_id]['ref_by'].items():
-              for id2 in id2s:
-                if 'refs' in self.graph[rt][record_id]:
-                  if record_id in self.graph[rt2][id2]['refs'][rt]:
-                    if new_record_id != record_id:
-                      self.graph[rt2][id2]['refs'][rt].remove(record_id)
-                      if new_record_id:
-                        self.graph[rt2][id2]['refs'][rt].append(new_record_id)
-                        self._update_reference(id2, rt2,
-                                               rt, record_id, new_record_id)
-            if new_record_id != record_id:
-              if new_record_id:
-                self.graph[rt][new_record_id] = self.graph[rt][record_id]
-              del self.graph[rt][record_id]
+            if record_id in self.graph[rt2][id2]['refs'][rt]:
+              self.graph[rt2][id2]['refs'][rt].remove(record_id)
+      del self.graph[rt][record_id]
+
+    def _disconnect_ref_and_update_ref_by(self, rt, record_id, new_record_id):
+      for rt2, id2s in self.graph[rt][record_id]['refs'].items():
+        for id2 in id2s:
+          if 'ref_by' in self.graph[rt2][id2]:
+            if record_id in self.graph[rt2][id2]['ref_by'][rt]:
+              self.graph[rt2][id2]['ref_by'][rt].remove(record_id)
+      self.graph[rt][record_id]['refs'] = defaultdict(list)
+      if new_record_id != record_id:
+        for rt2, in self.graph[rt][record_id]['ref_by'].keys():
+          ref_by_ids = list(self.graph[rt][record_id]['ref_by'][rt2])
+          for id2 in ref_by_ids:
+            if 'refs' in self.graph[rt2][id2]:
+              if record_id in self.graph[rt2][id2]['refs'][rt]:
+                  new_id2 = self._update_reference(id2, rt2,
+                                         rt, record_id, new_record_id)
+                  self.graph[rt2][new_id2]['refs'][rt].remove(record_id)
+                  self.graph[rt2][new_id2]['refs'][rt].append(new_record_id)
+        self.graph[rt][new_record_id] = self.graph[rt][record_id]
+        del self.graph[rt][record_id]
 
     def _graph_add_S(self, record_id, record):
       document_id = self.compute_docid(record)
@@ -340,7 +356,8 @@ class EGCData:
       self.records[record_num] = updated_data
       self.lines[record_num] = encode_line(updated_data)
       record_type = updated_data["record_type"]
-      self._disconnect(record_type, existing_id, updated_id)
+      self._disconnect_ref_and_update_ref_by(\
+          record_type, existing_id, updated_id)
       self._graph_add_record(updated_id, updated_data, True)
 
     def find_all(self, record_type):
