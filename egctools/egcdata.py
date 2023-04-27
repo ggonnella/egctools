@@ -271,6 +271,9 @@ class EGCData:
       if existing_id not in self.id2rnum:
           raise ValueError('Record does not exist: {}'.format(existing_id))
       record_num = self.id2rnum[existing_id]
+      record_type = self.records[record_num]["record_type"]
+      if record_type != updated_data["record_type"]:
+          raise ValueError('Record type cannot be changed')
       updated_id = self.compute_id(updated_data)
       if updated_id != existing_id:
           if updated_id in self.id2rnum:
@@ -290,6 +293,10 @@ class EGCData:
 
     def get_records(self, record_type):
       return [self.records[i] for i in self.rt2rnums[record_type]]
+
+    def get_record_ids(self, record_type):
+      return [self.compute_id(self.records[i]) \
+          for i in self.rt2rnums[record_type]]
 
     def get_record_by_id(self, record_id):
       record_num = self.id2rnum[record_id]
