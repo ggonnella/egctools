@@ -108,10 +108,10 @@ class EGCData:
         raise ValueError("Wrong number of ID fields for composing an ID of"+\
             "a record of type {}: {}".\
             format(record_type, len(id_fields)))
-      return '-'.join([record_type]+id_fields)
+      return '-'.join([record_type]+list(id_fields))
 
     @staticmethod
-    def compute_id(record):
+    def record_id(record):
       if record['record_type'] == 'D':
         return EGCData.compute_docid(record)
       elif record['record_type'] == 'M':
@@ -243,7 +243,7 @@ class EGCData:
       for i, record in enumerate(self.records):
         rt = record['record_type']
         self.rt2rnums[rt].append(i)
-        record_id = self.compute_id(record)
+        record_id = self.record_id(record)
         self.id2rnum[record_id] = i
         self._graph_add_record(record_id, record)
       self._graph_solve_VC_ST()
@@ -302,7 +302,7 @@ class EGCData:
             f.write(line + "\n")
 
     def create(self, record_data):
-      record_id = self.compute_id(record_data)
+      record_id = self.record_id(record_data)
       if record_id in self.id2rnum:
           raise ValueError('Record already exists: {}'.format(record_id))
       self.records.append(record_data)
