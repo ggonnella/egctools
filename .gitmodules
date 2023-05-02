@@ -1,3 +1,6 @@
 [submodule "egctools/data/egc-spec"]
 	path = egctools/data/egc-spec
 	url = https://github.com/ggonnella/egc-spec
+[submodule "egctools/data/pgto"]
+	path = egctools/data/pgto
+	url = git@github.com:ggonnella/pgto
