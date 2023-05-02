@@ -9,6 +9,7 @@ from .references import get_G_to_G, get_U_to_U, get_A_to_U, get_VC_to_ST, \
 from collections import defaultdict
 import pronto
 import importlib
+import fardes
 
 class EGCData:
     """
@@ -449,3 +450,11 @@ class EGCData:
             if egc_lbl:
               result.append(egc_lbl)
       return result
+
+    @staticmethod
+    def validate_fardes(fardes_str):
+      try:
+        fardes.parse(fardes_str)
+        return True
+      except Exception:
+        return False
