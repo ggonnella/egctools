@@ -427,6 +427,25 @@ class EGCData:
     _pgto = pronto.Ontology(_pgto_file)
 
     @staticmethod
+    def pgto_choices():
+      result = []
+      for term in EGCData._pgto.values():
+        if isinstance(term, pronto.Term):
+          if term.namespace == 'group_type':
+            egc_lbl = [a.resource for a in term.annotations \
+                       if a.property == 'EGC_label'][0]
+            if egc_lbl:
+              result.append((egc_lbl, term.name))
+      return result
+
+    @staticmethod
     def pgto_types():
-      return [(term.id, term.name) for term in EGCData._pgto.values() if
-          isinstance(term, pronto.Term) and term.namespace == 'group_type']
+      result = []
+      for term in EGCData._pgto.values():
+        if isinstance(term, pronto.Term):
+          if term.namespace == 'group_type':
+            egc_lbl = [a.resource for a in term.annotations \
+                       if a.property == 'EGC_label'][0]
+            if egc_lbl:
+              result.append(egc_lbl)
+      return result
