@@ -7,6 +7,8 @@ from .references import get_G_to_G, get_U_to_U, get_A_to_U, get_VC_to_ST, \
                         update_G_in_VC, update_U_in_U, update_U_in_A, \
                         update_U_in_M, update_ST_in_VC, update_A_in_VC
 from collections import defaultdict
+import pronto
+import importlib
 
 class EGCData:
     """
@@ -419,3 +421,12 @@ class EGCData:
                 return True
       return False
 
+    _data = importlib.resources.files("egctools").joinpath("data")
+    _pgto_dir = _data.joinpath("pgto")
+    _pgto_file = _pgto_dir.joinpath("group_type.obo")
+    _pgto = pronto.Ontology(_pgto_file)
+
+    @staticmethod
+    def pgto_types():
+      return [(term.id, term.name) for term in EGCData._pgto.values() if
+          isinstance(term, pronto.Term) and term.namespace == 'group_type']
