@@ -435,7 +435,7 @@ class EGCData:
             egc_lbl = [a.resource for a in term.annotations \
                        if a.property == 'EGC_label'][0]
             if egc_lbl:
-              result.append((egc_lbl, term.name))
+              result.append((egc_lbl, f"({term.id}) {term.name}"))
       return result
 
     @staticmethod
