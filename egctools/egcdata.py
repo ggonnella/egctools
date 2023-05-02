@@ -10,6 +10,7 @@ from collections import defaultdict
 import pronto
 import importlib
 import fardes
+import lexpr
 
 class EGCData:
     """
@@ -458,3 +459,14 @@ class EGCData:
         return True
       except Exception:
         return False
+
+    _lexpr_parser = lexpr.Parser()
+
+    @staticmethod
+    def validate_lexpr(lexpr_str):
+      EGCData._lexpr_parser.parse(lexpr_str)
+      return True
+
+    @staticmethod
+    def get_lexpr_ids(lexpr_str):
+      return EGCData._lexpr_parser.list_identifiers(lexpr_str)
