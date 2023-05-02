@@ -42,6 +42,7 @@ class EGCData:
     # Finding records
 
     - ``find(record_id)``: Get a record by its ID
+    - ``line(record_id)``: Get EGC line for a record by its ID
     - ``find_all(record_type)``: Get all records of a given type
     - ``find_all_ids(record_type)``: Get all record IDs of a given type
 
@@ -372,6 +373,10 @@ class EGCData:
       if record_num is None:
         raise ValueError('Record does not exist: {}'.format(record_id))
       return self.records[record_num]
+
+    def line(self, record_id):
+      record_num = self.id2rnum[record_id]
+      return self.lines[record_num]
 
     def get_record(self, record_data):
       record_id = self.record_id(record_data)

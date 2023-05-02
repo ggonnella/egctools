@@ -1,14 +1,21 @@
 Total number of lines: {{ total_count }}
 
+{%- if by_record_type.S or by_record_type.T or by_record_type.D -%}
 Sources documentation
 
+  {%- if by_record_type.S or by_record_type.T -%}
   n.extracts: {{ by_record_type.S + by_record_type.T }}
   - n.snippets: {{ by_record_type.S }} ({{ '%.1f' | format(by_record_type.S / (by_record_type.S + by_record_type.T) * 100) }}% of extracts)
   - n.tables:   {{ by_record_type.T }} ({{ '%.1f' | format(by_record_type.T / (by_record_type.S + by_record_type.T) * 100) }}% of extracts)
+  {%- endif -%}
+  {%- if by_record_type.D -%}
   from {{ by_record_type.D }} documents
     avg n.snippets/document: {{ '%.2f' | format(by_record_type.S / by_record_type.D) }}
     avg n.extracts/document: {{ '%.2f' | format((by_record_type.S + by_record_type.T) / by_record_type.D) }}
+  {%- endif -%}
 
+{%- endif -%}
+{%- if by_record_type.G -%}
 Organism groups
 
   N.groups: {{ by_record_type.G }}
@@ -36,6 +43,8 @@ Organism groups
       {%- endif -%}
     {%- endfor %}
 
+{%- endif -%}
+{%- if by_record_type.A -%}
 Genome contents
 
   N.attributes: {{ by_record_type.A }}
@@ -57,8 +66,11 @@ Genome contents
       {{k}}: {{v}}
       {%- endfor %}
 
+{%- endif -%}
+{%- if by_record_type.V or by_record_type.C -%}
 Rules:
 
+{%- if by_record_type.V -%}
   N.value rules: {{ by_record_type.V }}
     referring to {{ n_A_in_V }} attributes
       avg n.value rules/attribute: {{ "%.1f" | format(by_record_type.V / n_A_in_V) }}
@@ -78,7 +90,9 @@ Rules:
           {{k2}}: {{v2}};{{" "}}
         {%- endfor -%}{{" "}})
       {%- endfor %}
+{%- endif -%}
 
+{%- if by_record_type.V -%}
   N.comparison rules: {{ by_record_type.C }}
     referring to {{ n_A_in_C }} attributes
       avg n.value rules/attribute: {{ "%.1f" | format(by_record_type.V / n_A_in_C) }}
@@ -100,4 +114,6 @@ Rules:
       {%- for k in n_C_by_operator | sort %}
       {{k}}: {{n_C_by_operator[k]}}
       {%- endfor %}
+{%- endif -%}
 
+{%- endif -%}
