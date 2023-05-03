@@ -15,35 +15,39 @@ Sources documentation
   {%- endif -%}
 
 {%- endif -%}
-{%- if by_record_type.G -%}
+{% if by_record_type.G %}
 Organism groups
 
   N.groups: {{ by_record_type.G }}
   Types:
-    {%- for gtype in n_G_by_type %}
-      {{ gtype }}: {{ n_G_by_type[gtype] }}
-      {%- if gtype in n_G_defprefix_by_type -%}
-          {{ '      ' }} Definition types: {{ ' ' }}
-            {%- for defprefix in n_G_defprefix_by_type[gtype] -%}
-               {{ defprefix }}: {{ n_G_defprefix_by_type[gtype][defprefix] }}; {{ ' ' }}
+    {%- for gcat, gcat_types in G_categories.items() %}
+    {{ gcat }}: {{ n_G_by_category[gcat] }} ({{ "%.2f" | format(n_G_by_category[gcat] * 100 / total_count) }}%)
+      {%- for gtype in gcat_types %}
+        {{ gtype }}: {{ n_G_by_type[gtype] }} ({{ "%.2f" | format(n_G_by_type[gtype] * 100 / total_count) }}%)
+        {%- if gtype in n_G_defprefix_by_type -%}
+            {{ '      ' }} Definition types: {{ ' ' }}
+              {%- for defprefix in n_G_defprefix_by_type[gtype] -%}
+                 {{ defprefix }}: {{ n_G_defprefix_by_type[gtype][defprefix] }}; {{ ' ' }}
+              {%- endfor -%}
+        {%- endif -%}
+        {% if gtype in info_G_by_type %}
+            {%- for item in info_G_by_type[gtype] %}
+              {{ item[0] }}:{{ "\t" }}{{ item[1] }}{{ "\t"  }}{{ item[2]  }}
             {%- endfor -%}
-      {%- endif -%}
-      {% if gtype in info_G_by_type %}
-          {%- for item in info_G_by_type[gtype] %}
-            {{ item[0] }}:{{ "\t" }}{{ item[1] }}{{ "\t"  }}{{ item[2]  }}
-          {%- endfor -%}
-      {%- endif -%}
-      {% if gtype in n_G_by_child_type %}
-          {%- for klass in n_G_by_child_type[gtype] %}
-            {{klass}}:
-            {%- for child_type, c in n_G_by_child_type[gtype][klass].items() %}
-              {{ child_type }}: {{ c }}
+        {%- endif -%}
+        {% if gtype in n_G_by_children_type %}
+            {%- for klass in n_G_by_children_type[gtype] %}
+              {{klass}}: {{ n_G_by_children_category[gtype][klass] }} ({{ "%.2f" | format(n_G_by_children_category[gtype][klass] * 100 / total_count) }}%)
+              {%- for child_type, c in n_G_by_children_type[gtype][klass].items() %}
+                {{ child_type }}: {{ c }}
+              {%- endfor -%}
             {%- endfor -%}
-          {%- endfor -%}
-      {%- endif -%}
+        {%- endif -%}
+      {%- endfor %}
     {%- endfor %}
+{%- endif %}
 
-{%- endif -%}
+{%- if by_record_type.A or by_record_type.U -%}
 Genome contents
 
   {%- if by_record_type.A -%}
@@ -69,6 +73,7 @@ Genome contents
       {%- endfor %}
   {%- endif -%}
 
+{%- endif %}
 {%- if by_record_type.V or by_record_type.C -%}
 Rules:
 
