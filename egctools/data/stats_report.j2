@@ -47,10 +47,10 @@ Organism groups
     {%- endfor %}
 {%- endif %}
 
-{%- if by_record_type.A or by_record_type.U -%}
+{%- if by_record_type.A or by_record_type.U %}
 Genome contents
 
-  {%- if by_record_type.A -%}
+  {% if by_record_type.A -%}
   N.attributes: {{ by_record_type.A }}
     By mode:
       {%- for k in n_A_by_mode | sort %}

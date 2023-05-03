@@ -72,16 +72,13 @@ def _collect_G_stats(stats, line, lines):
     stats['n_G_by_children_category'][type][klass] += 1
     stats['n_G_by_children_type'][type][klass][key] += 1
 
-def _postprocess_G_stats(stats):
-  pass
-
 # A stats
 
 def _init_A_stats(stats):
   stats['n_A_by_mode'] = defaultdict(int)
   stats['n_A_mode_by_U_type'] = defaultdict(lambda: defaultdict(int))
   stats['n_A_by_U'] = defaultdict(int)
-  stats['n_n_A_by_U'] = defaultdict(int),
+  stats['n_n_A_by_U'] = defaultdict(int)
 
 def _collect_A_stats(stats, line, lines):
   if isinstance(line["mode"], str):
@@ -96,6 +93,9 @@ def _collect_A_stats(stats, line, lines):
 def _postprocess_A_stats(stats):
   for unit in stats['n_A_by_U']:
     stats['n_n_A_by_U'][stats['n_A_by_U'][unit]] += 1
+  n_units_w_A = len(stats['n_A_by_U'])
+  n_units_wo_A = stats['by_record_type']["U"] - n_units_w_A
+  stats['n_n_A_by_U'][0] = n_units_wo_A
   stats['n_A_by_U'] = defaultdict(int)
 
 # U stats
@@ -105,9 +105,6 @@ def _init_U_stats(stats):
 
 def _collect_U_stats(stats, line, lines):
   stats['n_U_by_type'][line["type"]] += 1
-
-def _postprocess_U_stats(stats):
-  pass
 
 # M stats
 
@@ -131,7 +128,7 @@ def _init_V_stats(stats):
   stats['n_V_by_G_portion'] = defaultdict(int)
   stats['n_V_by_operator'] = defaultdict(int)
   stats['n_V_by_operator_and_reference'] = \
-      defaultdict(lambda: defaultdict(int)),
+      defaultdict(lambda: defaultdict(int))
   stats['G_in_V'] = set()
   stats['A_in_V'] = set()
   stats['n_G_in_V'] = 0
@@ -162,7 +159,7 @@ def _postprocess_V_stats(stats):
 
 def _init_C_stats(stats):
   stats['n_C_by_n_sources'] = defaultdict(int)
-  stats['n_C_by_n_A'] = {1: 0, 2: 0},
+  stats['n_C_by_n_A'] = {1: 0, 2: 0}
   stats['n_C_by_G_portion'] = defaultdict(int)
   stats['n_C_by_operator'] = defaultdict(int)
   stats['G_in_C'] = set()
@@ -206,21 +203,14 @@ def _collect_common_stats(stats, line, lines):
   stats['by_record_type'][line['record_type']] += 1
   stats['total_count'] += 1
 
-def _postprocess_common_stats(stats):
-  pass
-
 # main
-
-def _postprocess_stats(stats):
-  for rt in ['G', 'A', 'U', 'M', 'V', 'C']:
-    getattr(sys.modules[__name__], f"_postprocess_{rt}_stats")(stats)
-  _postprocess_common_stats(stats)
 
 def _init_stats():
   stats = {}
   _init_common_stats(stats)
   for rt in ['G', 'A', 'U', 'M', 'V', 'C']:
-    getattr(sys.modules[__name__], f"_init_{rt}_stats")(stats)
+    if hasattr(sys.modules[__name__], f"_init_{rt}_stats"):
+      getattr(sys.modules[__name__], f"_init_{rt}_stats")(stats)
   return stats
 
 def _lines_with_id(fname):
@@ -238,8 +228,11 @@ def collect(fname, stats = None):
   for line in parsed_lines(fname):
     _collect_common_stats(stats, line, lines)
     rt = line['record_type']
-    getattr(sys.modules[__name__], f"_collect_{rt}_stats")(stats, line, lines)
-  _postprocess_stats(stats)
+    if hasattr(sys.modules[__name__], f"_collect_{rt}_stats"):
+      getattr(sys.modules[__name__], f"_collect_{rt}_stats")(stats, line, lines)
+  for rt in stats['by_record_type'].keys():
+    if hasattr(sys.modules[__name__], f"_postprocess_{rt}_stats"):
+      getattr(sys.modules[__name__], f"_postprocess_{rt}_stats")(stats)
   return stats
 
 def report(s):
