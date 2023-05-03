@@ -44,14 +44,16 @@ Organism groups
     {%- endfor %}
 
 {%- endif -%}
-{%- if by_record_type.A -%}
 Genome contents
 
+  {%- if by_record_type.A -%}
   N.attributes: {{ by_record_type.A }}
     By mode:
       {%- for k in n_A_by_mode | sort %}
       {{k}}: {{n_A_by_mode[k]}}
       {%- endfor %}
+  {%- endif -%}
+  {%- if by_record_type.U -%}
   N.units: {{ by_record_type.U }} (with M: {{ n_U_with_M }})
     By number of attributes:
       {%- for k,v in n_n_A_by_U.items() %}
@@ -65,8 +67,8 @@ Genome contents
       {%- for k,v in n_M_by_resource_id.items() %}
       {{k}}: {{v}}
       {%- endfor %}
+  {%- endif -%}
 
-{%- endif -%}
 {%- if by_record_type.V or by_record_type.C -%}
 Rules:
 

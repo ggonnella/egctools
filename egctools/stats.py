@@ -82,9 +82,13 @@ def collect(fname, stats = None):
           child_types = {g: lines["G"][g]["type"] for g in child_groups}
 
         child_types = set(child_types.values())
-        if child_types == {"taxonomic"}:
+        if all(t in \
+            ["taxonomic", "strain", "paraphyletic", "metagenome_assembled"]
+            for t in child_types):
           klass = "only_taxonomic"
-        elif "taxonomic" not in child_types:
+        elif all(t not in \
+            ["taxonomic", "strain", "paraphyletic", "metagenome_assembled"]
+            for t in child_types):
           klass = "only_not_taxonomic"
         else:
           klass = "mixed"
