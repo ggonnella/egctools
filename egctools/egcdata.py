@@ -7,10 +7,9 @@ from .references import get_G_to_G, get_U_to_U, get_A_to_U, get_VC_to_ST, \
                         update_G_in_VC, update_U_in_U, update_U_in_A, \
                         update_U_in_M, update_ST_in_VC, update_A_in_VC
 from collections import defaultdict
-import pronto
-import importlib
-import fardes
+from . import pgto
 import lexpr
+import fardes
 
 class EGCData:
     """
@@ -423,34 +422,13 @@ class EGCData:
                 return True
       return False
 
-    _data = importlib.resources.files("egctools").joinpath("data")
-    _pgto_dir = _data.joinpath("pgto")
-    _pgto_file = _pgto_dir.joinpath("group_type.obo")
-    _pgto = pronto.Ontology(_pgto_file)
-
     @staticmethod
     def pgto_choices():
-      result = []
-      for term in EGCData._pgto.values():
-        if isinstance(term, pronto.Term):
-          if term.namespace == 'group_type':
-            egc_lbl = [a.resource for a in term.annotations \
-                       if a.property == 'EGC_label'][0]
-            if egc_lbl:
-              result.append((egc_lbl, f"({term.id}) {term.name}"))
-      return result
+      return pgto.group_type_choices()
 
     @staticmethod
     def pgto_types():
-      result = []
-      for term in EGCData._pgto.values():
-        if isinstance(term, pronto.Term):
-          if term.namespace == 'group_type':
-            egc_lbl = [a.resource for a in term.annotations \
-                       if a.property == 'EGC_label'][0]
-            if egc_lbl:
-              result.append(egc_lbl)
-      return result
+      return pgto.group_types()
 
     @staticmethod
     def validate_fardes(fardes_str):
