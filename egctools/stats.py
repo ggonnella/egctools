@@ -221,11 +221,16 @@ def _lines_with_id(fname):
       lines[rt][line['id']] = line
   return lines
 
-def collect(fname, stats = None):
+def collect(fname, stats = None, skip_ids = None):
   lines = _lines_with_id(fname)
   if stats is None:
     stats = _init_stats()
   for line in parsed_lines(fname):
+    if skip_ids is not None and 'id' in line:
+      if line['id'] in skip_ids:
+        continue
+      else:
+        skip_ids.add(line['id'])
     _collect_common_stats(stats, line, lines)
     rt = line['record_type']
     if hasattr(sys.modules[__name__], f"_collect_{rt}_stats"):

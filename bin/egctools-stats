@@ -11,7 +11,8 @@ Arguments:
                the statistics are combined
 
 Options:
-  -h --help     Show this screen.
+  -s --skip-double  ignore lines with the previously seen ID
+  -h --help         Show this screen.
   --version     Show version.
 """
 import egctools
@@ -20,8 +21,9 @@ from docopt import docopt
 def main(args):
   egcfiles = args['<egcfile>']
   egcstats = None
+  skip_ids = set() if args['--skip-double'] else None
   for egcfile in egcfiles:
-    egcstats=egctools.stats.collect(egcfile, egcstats)
+    egcstats = egctools.stats.collect(egcfile, egcstats, skip_ids)
   print(egctools.stats.report(egcstats))
 
 if __name__ == '__main__':
