@@ -1,21 +1,21 @@
 Total number of lines: {{ total_count }}
 
-{%- if by_record_type.S or by_record_type.T or by_record_type.D -%}
+{% if by_record_type.S or by_record_type.T or by_record_type.D -%}
 Sources documentation
 
-  {%- if by_record_type.S or by_record_type.T -%}
+  {% if by_record_type.S or by_record_type.T -%}
   n.extracts: {{ by_record_type.S + by_record_type.T }}
   - n.snippets: {{ by_record_type.S }} ({{ '%.1f' | format(by_record_type.S / (by_record_type.S + by_record_type.T) * 100) }}% of extracts)
   - n.tables:   {{ by_record_type.T }} ({{ '%.1f' | format(by_record_type.T / (by_record_type.S + by_record_type.T) * 100) }}% of extracts)
-  {%- endif -%}
-  {%- if by_record_type.D -%}
+  {% endif -%}
+  {% if by_record_type.D -%}
   from {{ by_record_type.D }} documents
     avg n.snippets/document: {{ '%.2f' | format(by_record_type.S / by_record_type.D) }}
     avg n.extracts/document: {{ '%.2f' | format((by_record_type.S + by_record_type.T) / by_record_type.D) }}
-  {%- endif -%}
+  {%- endif %}
 
-{%- endif -%}
-{% if by_record_type.G %}
+{% endif %}
+{%- if by_record_type.G -%}
 Organism groups
 
   N.groups: {{ by_record_type.G }}
@@ -45,9 +45,9 @@ Organism groups
         {%- endif -%}
       {%- endfor %}
     {%- endfor %}
-{%- endif %}
 
-{%- if by_record_type.A or by_record_type.U %}
+{% endif %}
+{%- if by_record_type.A or by_record_type.U -%}
 Genome contents
 
   {% if by_record_type.A -%}
@@ -56,8 +56,9 @@ Genome contents
       {%- for k in n_A_by_mode | sort %}
       {{k}}: {{n_A_by_mode[k]}}
       {%- endfor %}
-  {%- endif -%}
-  {%- if by_record_type.U -%}
+  {%- endif %}
+  {%- if by_record_type.U %}
+
   N.units: {{ by_record_type.U }} (with M: {{ n_U_with_M }})
     By number of attributes:
       {%- for k,v in n_n_A_by_U.items() %}
@@ -67,17 +68,18 @@ Genome contents
       {%- for k in n_U_by_type | sort %}
       {{k}}:{{'\t'}}{{n_U_by_type[k]}}   {{'\t'}}(n.attr {{n_A_mode_by_U_type[k].values()|sum}}, by mode: [ {% for x,y in n_A_mode_by_U_type[k].items() %} {{x}}: {{y}}; {{""}} {% endfor %}])
       {%- endfor %}
+
   N.models: {{ by_record_type.M }}
       {%- for k,v in n_M_by_resource_id.items() %}
       {{k}}: {{v}}
       {%- endfor %}
-  {%- endif -%}
+  {%- endif %}
 
 {%- endif %}
-{%- if by_record_type.V or by_record_type.C -%}
+{% if by_record_type.V or by_record_type.C %}
 Rules:
 
-{%- if by_record_type.V -%}
+  {% if by_record_type.V -%}
   N.value rules: {{ by_record_type.V }}
     referring to {{ n_A_in_V }} attributes
       avg n.value rules/attribute: {{ "%.1f" | format(by_record_type.V / n_A_in_V) }}
@@ -97,9 +99,9 @@ Rules:
           {{k2}}: {{v2}};{{" "}}
         {%- endfor -%}{{" "}})
       {%- endfor %}
-{%- endif -%}
+{%- endif %}
 
-{%- if by_record_type.V -%}
+{% if by_record_type.C %}
   N.comparison rules: {{ by_record_type.C }}
     referring to {{ n_A_in_C }} attributes
       avg n.value rules/attribute: {{ "%.1f" | format(by_record_type.V / n_A_in_C) }}
