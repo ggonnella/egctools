@@ -87,7 +87,7 @@ def _collect_A_stats(stats, line, lines):
     mkey = line["mode"]['mode']
   unit = lines['U'][line["unit_id"]]
   stats['n_A_by_mode'][mkey]+= 1
-  stats['n_A_mode_by_U_type'][unit['type']][mkey] += 1
+  stats['n_A_mode_by_U_type'][unit['type']['base_type']][mkey] += 1
   stats['n_A_by_U'][line['unit_id']] += 1
 
 def _postprocess_A_stats(stats):
@@ -101,10 +101,22 @@ def _postprocess_A_stats(stats):
 # U stats
 
 def _init_U_stats(stats):
+  stats['n_U_by_kind'] = defaultdict(int)
   stats['n_U_by_type'] = defaultdict(int)
+  stats['n_U_by_type_r'] = defaultdict(lambda: defaultdict(int))
+  stats['n_U_by_kind_and_type'] = defaultdict(lambda: defaultdict(int))
+  stats['n_U_by_kind_and_type_r'] = \
+      defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
 def _collect_U_stats(stats, line, lines):
-  stats['n_U_by_type'][line["type"]] += 1
+  t = line['type']
+  stats['n_U_by_kind'][t["kind"]] += 1
+  stats['n_U_by_type'][t["base_type"]] += 1
+  stats['n_U_by_kind_and_type'][t["kind"]][t["base_type"]] += 1
+  if 'resource' in t:
+    r = t['resource']
+    stats['n_U_by_type_r'][t["base_type"]][r] += 1
+    stats['n_U_by_kind_and_type_r'][t["kind"]][t["base_type"]][r] += 1
 
 # M stats
 

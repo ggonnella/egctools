@@ -65,9 +65,22 @@ Genome contents
       with {{k}} attributes: {{v}}
       {%- endfor %}
     By type:
-      {%- for k in n_U_by_type | sort %}
-      {{k}}:{{'\t'}}{{n_U_by_type[k]}}   {{'\t'}}(n.attr {{n_A_mode_by_U_type[k].values()|sum}}, by mode: [ {% for x,y in n_A_mode_by_U_type[k].items() %} {{x}}: {{y}}; {{""}} {% endfor %}])
+      {%- for kind in n_U_by_kind_and_type | sort %}
+        {{kind}}:{{'\t'}}{{n_U_by_kind[kind]}}
+        {%- for k in n_U_by_kind_and_type[kind] | sort %}
+          {{k}}:{{'\t'}}{{n_U_by_kind_and_type[kind][k]}}   {{'\t'}}(n.attr {{n_A_mode_by_U_type[k].values()|sum}}, by mode: [ {% for x,y in n_A_mode_by_U_type[k].items() %} {{x}}: {{y}}; {{""}} {% endfor %}])
+          {%- for r in n_U_by_kind_and_type_r[kind][k] | sort %}
+            {{r}}:{{'\t'}}{{n_U_by_kind_and_type_r[kind][k][r]}}
+          {%- endfor %}
+        {%- endfor %}
       {%- endfor %}
+        (sum):
+        {%- for k in n_U_by_type | sort %}
+          {{k}}:{{'\t'}}{{n_U_by_type[k]}}   {{'\t'}}(n.attr {{n_A_mode_by_U_type[k].values()|sum}}, by mode: [ {% for x,y in n_A_mode_by_U_type[k].items() %} {{x}}: {{y}}; {{""}} {% endfor %}])
+          {%- for r in n_U_by_type_r[k] | sort %}
+            {{r}}:{{'\t'}}{{n_U_by_type_r[k][r]}}
+          {%- endfor %}
+        {%- endfor %}
 
   N.models: {{ by_record_type.M }}
       {%- for k,v in n_M_by_resource_id.items() %}

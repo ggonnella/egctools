@@ -95,11 +95,6 @@ def generate_G_id(egc_data, name, gtype, old_id=None):
 
 def generate_U_id(egc_data, utype,
                      symbol, definition, description, old_id=None):
-  m = re.match(r"(set|ctg)!?:\+?(.*)", utype)
-  if m:
-    utype = m.group(1)
-  utype = utype.split(":")[0]
-
   pfx = UnitTypePfx.get(utype, UnitTypePfx[None]+_sanitize(utype[0:2], ""))
   if symbol != ".":
     namesrc = [symbol]
