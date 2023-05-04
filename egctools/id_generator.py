@@ -57,7 +57,6 @@ UnitTypePfx = {
         "homolog_protein": "h",
         "ortholog_group": "og",
         "ortholog_groups_category": "k",
-        "protein_type": "pt",
         "protein_complex": "pc",
         "specific_gene": "g",
         "specific_protein": "p",
@@ -96,9 +95,7 @@ def generate_G_id(egc_data, name, gtype, old_id=None):
 
 def generate_U_id(egc_data, utype,
                      symbol, definition, description, old_id=None):
-  if utype.startswith("*"):
-    utype = utype[1:]
-  m = re.match(r"set!?:\+?(.*)", utype)
+  m = re.match(r"(set|ctg)!?:\+?(.*)", utype)
   if m:
     utype = m.group(1)
   utype = utype.split(":")[0]

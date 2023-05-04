@@ -31,7 +31,7 @@ def get_U_to_U(line):
       m = re.match(r'^([a-zA-Z0-9_]+)$', part)
       if m:
         parent_units.append(m.group(1))
-  elif line['type'].startswith('*') or line['type'].startswith('set!:'):
+  elif line['type'].startswith('cat!:') or line['type'].startswith('set!:'):
     parent_units = re.findall(r"[a-zA-Z0-9_]+", line["definition"])
   elif line['definition'].startswith('derived:'):
     m = re.match(r'^derived:([a-zA-Z0-9_]+):.*', line['definition'])
