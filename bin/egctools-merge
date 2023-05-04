@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""
+Merge EGC files skipping lines with previously seen IDs.
+
+Usage:
+  egctools-merge [options] <egcfile>...
+
+Arguments:
+  <egcfile>  EGC files to process
+
+Options:
+  -h --help         Show this screen.
+  --version     Show version.
+"""
+import egctools
+from docopt import docopt
+
+def main(args):
+  egcfiles = args['<egcfile>']
+  skip_ids = set()
+  for egcfile in egcfiles:
+    for line, parsed in egctools.parser.unparsed_and_parsed_lines(egcfile):
+      if 'id' in parsed:
+        if parsed['id'] in skip_ids:
+          continue
+        else:
+          skip_ids.add(parsed['id'])
+      print(line)
+
+if __name__ == '__main__':
+  args = docopt(__doc__, version=egctools.__version__)
+  main(args)
