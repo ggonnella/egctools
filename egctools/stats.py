@@ -7,6 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 _data = importlib.resources.files("egctools").joinpath("data")
 STATS_REPORT_TEMPLATE = "stats_report.j2"
 from . import pgto
+from .egcdata import EGCData
 
 # G stats
 
@@ -90,16 +91,18 @@ def _collect_A_stats(stats, line, lines):
   unit = lines['U'][line["unit_id"]]
   t = unit["type"]
   stats['n_A_by_mode'][mkey]+= 1
-  stats['n_A_mode_by_U_kind_and_type'][t['kind']][t['base_type']][mkey] += 1
+  tlbl = t['base_type']
+  if t['multi']:
+    tlbl = "+" + tlbl
+  stats['n_A_mode_by_U_kind_and_type'][t['kind']][tlbl][mkey] += 1
   stats['n_A_by_U'][line['unit_id']] += 1
 
 def _postprocess_A_stats(stats):
+  stats['n_n_A_by_U'] = Counter()
+  n_without_A = stats['by_record_type']['U'] - len(stats['n_A_by_U'])
+  stats['n_n_A_by_U'][0] = n_without_A
   for unit in stats['n_A_by_U']:
     stats['n_n_A_by_U'][stats['n_A_by_U'][unit]] += 1
-  n_units_w_A = len(stats['n_A_by_U'])
-  n_units_wo_A = stats['by_record_type']["U"] - n_units_w_A
-  stats['n_n_A_by_U'][0] = n_units_wo_A
-  stats['n_A_by_U'] = defaultdict(int)
 
 # U stats
 
@@ -113,12 +116,15 @@ def _init_U_stats(stats):
 def _collect_U_stats(stats, line, lines):
   t = line['type']
   stats['n_U_by_kind'][t["kind"]] += 1
-  stats['n_U_by_type'][t["base_type"]] += 1
-  stats['n_U_by_kind_and_type'][t["kind"]][t["base_type"]] += 1
+  tlbl = t['base_type']
+  if t['multi']:
+    tlbl = "+" + tlbl
+  stats['n_U_by_type'][tlbl] += 1
+  stats['n_U_by_kind_and_type'][t["kind"]][tlbl] += 1
   if 'resource' in t:
     r = t['resource']
-    stats['n_U_by_type_r'][t["base_type"]][r] += 1
-    stats['n_U_by_kind_and_type_r'][t["kind"]][t["base_type"]][r] += 1
+    stats['n_U_by_type_r'][tlbl][r] += 1
+    stats['n_U_by_kind_and_type_r'][t["kind"]][tlbl][r] += 1
 
 # M stats
 
@@ -133,7 +139,6 @@ def _collect_M_stats(stats, line, lines):
 
 def _postprocess_M_stats(stats):
   stats['n_U_with_M'] = len(stats['U_with_M'])
-  stats['U_with_M'] = set()
 
 # V stats
 
@@ -239,11 +244,12 @@ def collect(fname, stats = None, skip_ids = None):
   if stats is None:
     stats = _init_stats()
   for line in parsed_lines(fname):
-    if skip_ids is not None and 'id' in line:
-      if line['id'] in skip_ids:
+    line_id = EGCData.record_id(line)
+    if skip_ids is not None:
+      if line_id in skip_ids:
         continue
       else:
-        skip_ids.add(line['id'])
+        skip_ids.add(line_id)
     _collect_common_stats(stats, line, lines)
     rt = line['record_type']
     if hasattr(sys.modules[__name__], f"_collect_{rt}_stats"):

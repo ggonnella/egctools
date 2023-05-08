@@ -4,9 +4,11 @@ Prepare one of a predefined set of report tables in Latex format.
 
 Usage:
   egctools-stats [options] G_by_type <type> <egcfile>...
+  egctools-stats [options] U_with_A <egcfile>...
 
 Tables:
   G_by_type  Organism group definitions of given type
+  U_with_A   U by kind and type with n.A and their modes
 
 Arguments:
   <type>     Type of group
@@ -15,6 +17,7 @@ Arguments:
                the statistics are combined
 
 Options:
+  -s --skip-double  ignore lines with the previously seen ID
   --format F    Format of output [default: latex]
   -h --help     Show this screen.
   --version     Show version.
@@ -25,11 +28,15 @@ from docopt import docopt
 def main(args):
   egcfiles = args['<egcfile>']
   egcstats = None
+  skip_ids = set() if args['--skip-double'] else None
   for egcfile in egcfiles:
-    egcstats=egctools.stats.collect(egcfile, egcstats)
+    egcstats=egctools.stats.collect(egcfile, egcstats, skip_ids)
   if args['G_by_type']:
     print(egctools.table.create(egcstats, args["--format"],
-             "G_by_type", selected_gtype=args["<type>"]))
+             "g_by_type", selected_gtype=args["<type>"]))
+  if args['U_with_A']:
+    print(egctools.table.create(egcstats, args["--format"],
+             "u_with_a"))
 
 if __name__ == '__main__':
   args = docopt(__doc__, version=egctools.__version__)

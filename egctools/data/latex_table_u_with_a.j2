@@ -1,0 +1,45 @@
+% \usepackage{makecell}
+
+\begin{table*}
+\centering
+\begin{tabular}{llllll}
+\toprule
+\textbf{Category} & \textbf{Type} & \textbf{N.GCUs} &
+\textbf{Resources} & \textbf{N.attributes} & \textbf{Modes} \\
+{%- for kind, kind_c in n_U_by_kind.most_common() %}
+\midrule
+& \\[-3mm]
+\multirow{ {{n_U_by_kind_and_type[kind] | length}} }{*}{\textit{ {{kind|texesc}} }({{kind_c}})}
+  {%- for type,type_c in n_U_by_kind_and_type[kind].most_common() %}
+  {%- if not loop.first -%}
+  \cmidrule{2-6}
+  {%- endif -%}
+                & {{type|texesc}} & {{type_c}}      &
+                {%- set n_with_res = n_U_by_kind_and_type_r[kind][type].values()|sum -%}
+                {%- if n_with_res > 0 %}
+                  \scriptsize{\makecell{
+                    {%- for res, res_c in n_U_by_kind_and_type_r[kind][type].most_common() -%}
+                        {{res | texesc}}: {{res_c}}\\
+                    {%- endfor -%}
+                    {%- set n_wo_res = type_c - n_with_res -%}
+                    {%- if n_wo_res > 0 -%}
+                      \textit{none}: {{n_wo_res}}\\
+                    {%- endif -%} } }
+                {% endif -%}
+                & {% set n_a = n_A_mode_by_U_kind_and_type[kind][type].values()|sum %} {{n_a}} &
+                {%- if n_a > 0 -%}
+                  \scriptsize{\makecell{
+                  {%- for x,y in n_A_mode_by_U_kind_and_type[kind][type].most_common() -%}
+                     {{x | texesc}}: {{y}}\\
+                  {%- endfor -%} } }
+                {%- endif %}\\
+  {%- endfor %}
+{% endfor %}
+\bottomrule
+\end{tabular}
+\caption{Number of genome content unit (GCU) definitions by kind (simple, category,
+set) and type of unit, with the number of attributes defined for the units,
+with different measurement modes.}
+\label{tab:U_with_A_modes}
+\vspace{5mm}
+\end{table*}
