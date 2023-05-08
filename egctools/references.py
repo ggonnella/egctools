@@ -21,7 +21,7 @@ def update_G_in_G(line, old_id, new_id):
 
 def get_U_to_U(line):
   parent_units = []
-  if line['type']['base_type'].startswith('homolog_'):
+  if line['type']['base_type'].endswith('_homologs'):
     m = re.match(r'^homolog:([a-zA-Z0-9_]+)', line['definition'])
     if m:
       parent_units.append(m.group(1))
