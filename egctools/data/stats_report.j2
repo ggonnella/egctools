@@ -20,9 +20,10 @@ Organism groups
 
   N.groups: {{ by_record_type.G }}
   Types:
-    {%- for gcat, gcat_types in G_categories.items() %}
-    {{ gcat }}: {{ n_G_by_category[gcat] }} ({{ "%.2f" | format(n_G_by_category[gcat] * 100 / total_count) }}%)
-      {%- for gtype in gcat_types %}
+    {%- for gcat, gcat_c in n_G_by_category.most_common() %}
+    {%- if gcat != "derived" %}
+    {{ gcat }}: {{ gcat_c }} ({{ "%.2f" | format(n_G_by_category[gcat] * 100 / total_count) }}%)
+      {%- for gtype, gtype_c in n_G_by_category_and_type[gcat].most_common() %}
         {{ gtype }}: {{ n_G_by_type[gtype] }} ({{ "%.2f" | format(n_G_by_type[gtype] * 100 / total_count) }}%)
         {%- if gtype in n_G_defprefix_by_type -%}
             {{ '      ' }} Definition types: {{ ' ' }}
@@ -35,17 +36,21 @@ Organism groups
               {{ item[0] }}:{{ "\t" }}{{ item[1] }}{{ "\t"  }}{{ item[2]  }}
             {%- endfor -%}
         {%- endif -%}
-        {% if gtype in n_G_by_children_type %}
-            {%- for klass in n_G_by_children_type[gtype] %}
-              {{klass}}: {{ n_G_by_children_category[gtype][klass] }} ({{ "%.2f" | format(n_G_by_children_category[gtype][klass] * 100 / total_count) }}%)
-              {%- for child_type, c in n_G_by_children_type[gtype][klass].items() %}
-                {{ child_type }}: {{ c }}
-              {%- endfor -%}
-            {%- endfor -%}
-        {%- endif -%}
       {%- endfor %}
+    {% endif -%}
     {%- endfor %}
-
+    {% set gcat = "derived" %}
+    {{ gcat }}: {{ gcat_c }} ({{ "%.2f" | format(n_G_by_category[gcat] * 100 / total_count) }}%)
+    {%- for gtype, gtype_c in n_G_by_category_and_type[gcat].most_common() %}
+        {{ gtype }}: {{ gtype_c }} ({{ "%.2f" | format(gtype_c * 100 / total_count) }}%)
+        {% set collection = n_G_by_children_category[gtype] %}
+        {%- for klass, klass_c in collection.most_common() %}
+            {{klass}}: {{klass_c}} ({{ "%.2f" | format(klass_c * 100 / total_count) }}%)
+            {%- for child_type, c in n_G_by_children_type[gtype][klass].most_common() %}
+                {{ child_type }}: {{ c }}
+            {%- endfor -%}
+        {%- endfor -%}
+    {%- endfor %}
 {% endif %}
 {%- if by_record_type.A or by_record_type.U -%}
 Genome contents
@@ -53,37 +58,38 @@ Genome contents
   {% if by_record_type.A -%}
   N.attributes: {{ by_record_type.A }}
     By mode:
-      {%- for k in n_A_by_mode | sort %}
-      {{k}}: {{n_A_by_mode[k]}}
+      {%- for k,v in n_A_by_mode.most_common() %}
+      {{k}}: {{v}}
       {%- endfor %}
   {%- endif %}
   {%- if by_record_type.U %}
 
   N.units: {{ by_record_type.U }} (with M: {{ n_U_with_M }})
     By number of attributes:
-      {%- for k,v in n_n_A_by_U.items() %}
-      with {{k}} attributes: {{v}}
+      {%- for k in n_n_A_by_U.keys() | sort %}
+      with {{k}} attributes: {{n_n_A_by_U[k]}}
       {%- endfor %}
     By type:
-      {%- for kind in n_U_by_kind_and_type | sort %}
+      {%- for kind, kind_c in n_U_by_kind.most_common() %}
         {{kind}}:{{'\t'}}{{n_U_by_kind[kind]}}
-        {%- for k in n_U_by_kind_and_type[kind] | sort %}
-          {{k}}:{{'\t'}}{{n_U_by_kind_and_type[kind][k]}}   {{'\t'}}(n.attr {{n_A_mode_by_U_type[k].values()|sum}}, by mode: [ {% for x,y in n_A_mode_by_U_type[k].items() %} {{x}}: {{y}}; {{""}} {% endfor %}])
-          {%- for r in n_U_by_kind_and_type_r[kind][k] | sort %}
-            {{r}}:{{'\t'}}{{n_U_by_kind_and_type_r[kind][k][r]}}
+        {%- for k,v in n_U_by_kind_and_type[kind].most_common() %}
+          {{k}}:{{'\t'}}{{v}}   {{'\t'}}(n.attr {{n_A_mode_by_U_kind_and_type[kind][k].values()|sum}}, by mode: [ {% for x,y in n_A_mode_by_U_kind_and_type[kind][k].most_common() %} {{x}}: {{y}}; {{""}} {% endfor %}])
+          {%- for rk, rv in n_U_by_kind_and_type_r[kind][k].most_common() %}
+            {{rk}}:{{'\t'}}{{rv}}
           {%- endfor %}
         {%- endfor %}
-      {%- endfor %}
-        (sum):
-        {%- for k in n_U_by_type | sort %}
-          {{k}}:{{'\t'}}{{n_U_by_type[k]}}   {{'\t'}}(n.attr {{n_A_mode_by_U_type[k].values()|sum}}, by mode: [ {% for x,y in n_A_mode_by_U_type[k].items() %} {{x}}: {{y}}; {{""}} {% endfor %}])
-          {%- for r in n_U_by_type_r[k] | sort %}
-            {{r}}:{{'\t'}}{{n_U_by_type_r[k][r]}}
+      {% endfor %}
+
+        (all kinds):
+        {%- for k,v in n_U_by_type.most_common() %}
+          {{k}}:{{'\t'}}{{v}}
+          {%- for rk, rv in n_U_by_type_r[k].most_common() %}
+            {{rk}}:{{'\t'}}{{rv}}
           {%- endfor %}
         {%- endfor %}
 
   N.models: {{ by_record_type.M }}
-      {%- for k,v in n_M_by_resource_id.items() %}
+      {%- for k,v in n_M_by_resource_id.most_common() %}
       {{k}}: {{v}}
       {%- endfor %}
   {%- endif %}
@@ -99,16 +105,16 @@ Rules:
     referring to {{ n_G_in_V }} groups
       avg n.value rules/group: {{ "%.1f" | format(by_record_type.V/n_G_in_V) }}
     By n.sources:
-      {%- for k in n_V_by_n_sources | sort %}
-      {{k}}: {{n_V_by_n_sources[k]}}
+      {%- for k,v in n_V_by_n_sources.most_common() %}
+      {{k}}: {{v}}
       {%- endfor %}
     By group portion:
-      {%- for k in n_V_by_G_portion | sort %}
-      {{k}}: {{n_V_by_G_portion[k]}}
+      {%- for k,v in n_V_by_G_portion.most_common() %}
+      {{k}}: {{v}}
       {%- endfor %}
     By operator:
-      {%- for k in n_V_by_operator | sort %}
-      {{k}}: {{n_V_by_operator[k]}} {{"  \t"}}({%- for k2,v2 in n_V_by_operator_and_reference[k].items() -%}
+      {%- for k,v in n_V_by_operator.most_common() %}
+      {{k}}: {{v}} {{"  \t"}}({%- for k2,v2 in n_V_by_operator_and_reference[k].most_common() -%}
           {{k2}}: {{v2}};{{" "}}
         {%- endfor -%}{{" "}})
       {%- endfor %}
@@ -129,12 +135,12 @@ Rules:
       {{k}}: {{n_C_by_n_A[k]}}
       {%- endfor %}
     By group portion:
-      {%- for k in n_C_by_G_portion | sort %}
-      {{k}}: {{n_C_by_G_portion[k]}}
+      {%- for k,v in n_C_by_G_portion.most_common() %}
+      {{k}}: {{v}}
       {%- endfor %}
     By operator:
-      {%- for k in n_C_by_operator | sort %}
-      {{k}}: {{n_C_by_operator[k]}}
+      {%- for k,v in n_C_by_operator.most_common() %}
+      {{k}}: {{v}}
       {%- endfor %}
 {%- endif -%}
 

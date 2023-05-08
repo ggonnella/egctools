@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, Counter
 import re
 import sys
 import importlib.resources
@@ -11,13 +11,13 @@ from . import pgto
 # G stats
 
 def _init_G_stats(stats):
-  stats['n_G_by_type'] = defaultdict(int)
-  stats['n_G_by_category'] = defaultdict(int)
+  stats['n_G_by_type'] = Counter()
+  stats['n_G_by_category'] = Counter()
+  stats['n_G_by_category_and_type'] = defaultdict(Counter)
   stats['info_G_by_type'] = defaultdict(list)
-  stats['n_G_defprefix_by_type'] = defaultdict(lambda: defaultdict(int))
-  stats['n_G_by_children_type'] = \
-               defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
-  stats['n_G_by_children_category'] = defaultdict(lambda: defaultdict(int))
+  stats['n_G_defprefix_by_type'] = defaultdict(Counter)
+  stats['n_G_by_children_type'] = defaultdict(lambda: defaultdict(Counter))
+  stats['n_G_by_children_category'] = defaultdict(Counter)
 
 G_categories = {
   'taxonomy': pgto.taxonomy_group_types(),
@@ -36,6 +36,7 @@ def _collect_G_stats(stats, line, lines):
   stats['n_G_by_type'][type] += 1
   category = G_type2category[type]
   stats['n_G_by_category'][category] += 1
+  stats['n_G_by_category_and_type'][category][type] += 1
   if category not in ['taxonomy', 'derived']:
     stats['info_G_by_type'][line["type"]].append(\
         (line['id'], line["name"], line["definition"]))
@@ -65,9 +66,9 @@ def _collect_G_stats(stats, line, lines):
       child_categories.discard("taxonomy")
       cats = "_".join(sorted(child_categories))
       if has_tax:
-        klass = f"taxonomy_{cats}_mixed_category"
+        klass = f"taxonomy_and:{cats}"
       else:
-        klass = f"{cats}_mixed_category_without_taxonomy"
+        klass = f"no_taxonomy:{cats}"
     key = ",".join(sorted(child_types))
     stats['n_G_by_children_category'][type][klass] += 1
     stats['n_G_by_children_type'][type][klass][key] += 1
@@ -75,10 +76,11 @@ def _collect_G_stats(stats, line, lines):
 # A stats
 
 def _init_A_stats(stats):
-  stats['n_A_by_mode'] = defaultdict(int)
-  stats['n_A_mode_by_U_type'] = defaultdict(lambda: defaultdict(int))
-  stats['n_A_by_U'] = defaultdict(int)
-  stats['n_n_A_by_U'] = defaultdict(int)
+  stats['n_A_by_mode'] = Counter()
+  stats['n_A_mode_by_U_kind_and_type'] = \
+    defaultdict(lambda: defaultdict(Counter))
+  stats['n_A_by_U'] = Counter()
+  stats['n_n_A_by_U'] = Counter()
 
 def _collect_A_stats(stats, line, lines):
   if isinstance(line["mode"], str):
@@ -86,8 +88,9 @@ def _collect_A_stats(stats, line, lines):
   else:
     mkey = line["mode"]['mode']
   unit = lines['U'][line["unit_id"]]
+  t = unit["type"]
   stats['n_A_by_mode'][mkey]+= 1
-  stats['n_A_mode_by_U_type'][unit['type']['base_type']][mkey] += 1
+  stats['n_A_mode_by_U_kind_and_type'][t['kind']][t['base_type']][mkey] += 1
   stats['n_A_by_U'][line['unit_id']] += 1
 
 def _postprocess_A_stats(stats):
@@ -101,12 +104,11 @@ def _postprocess_A_stats(stats):
 # U stats
 
 def _init_U_stats(stats):
-  stats['n_U_by_kind'] = defaultdict(int)
-  stats['n_U_by_type'] = defaultdict(int)
-  stats['n_U_by_type_r'] = defaultdict(lambda: defaultdict(int))
-  stats['n_U_by_kind_and_type'] = defaultdict(lambda: defaultdict(int))
-  stats['n_U_by_kind_and_type_r'] = \
-      defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+  stats['n_U_by_kind'] = Counter()
+  stats['n_U_by_type'] = Counter()
+  stats['n_U_by_type_r'] = defaultdict(Counter)
+  stats['n_U_by_kind_and_type'] = defaultdict(Counter)
+  stats['n_U_by_kind_and_type_r'] = defaultdict(lambda: defaultdict(Counter))
 
 def _collect_U_stats(stats, line, lines):
   t = line['type']
@@ -123,7 +125,7 @@ def _collect_U_stats(stats, line, lines):
 def _init_M_stats(stats):
   stats['U_with_M'] = set()
   stats['n_U_with_M'] = 0
-  stats['n_M_by_resource_id'] = defaultdict(int)
+  stats['n_M_by_resource_id'] = Counter()
 
 def _collect_M_stats(stats, line, lines):
   stats['U_with_M'].add(line['unit_id'])
@@ -136,11 +138,10 @@ def _postprocess_M_stats(stats):
 # V stats
 
 def _init_V_stats(stats):
-  stats['n_V_by_n_sources'] = defaultdict(int)
-  stats['n_V_by_G_portion'] = defaultdict(int)
-  stats['n_V_by_operator'] = defaultdict(int)
-  stats['n_V_by_operator_and_reference'] = \
-      defaultdict(lambda: defaultdict(int))
+  stats['n_V_by_n_sources'] = Counter()
+  stats['n_V_by_G_portion'] = Counter()
+  stats['n_V_by_operator'] = Counter()
+  stats['n_V_by_operator_and_reference'] = defaultdict(Counter)
   stats['G_in_V'] = set()
   stats['A_in_V'] = set()
   stats['n_G_in_V'] = 0
@@ -170,10 +171,10 @@ def _postprocess_V_stats(stats):
 # C stats
 
 def _init_C_stats(stats):
-  stats['n_C_by_n_sources'] = defaultdict(int)
-  stats['n_C_by_n_A'] = {1: 0, 2: 0}
-  stats['n_C_by_G_portion'] = defaultdict(int)
-  stats['n_C_by_operator'] = defaultdict(int)
+  stats['n_C_by_n_sources'] = Counter()
+  stats['n_C_by_n_A'] = Counter({1: 0, 2: 0})
+  stats['n_C_by_G_portion'] = Counter()
+  stats['n_C_by_operator'] = Counter()
   stats['G_in_C'] = set()
   stats['A_in_C'] = set()
   stats['n_A_in_C'] = 0
