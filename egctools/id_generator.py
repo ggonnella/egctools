@@ -15,35 +15,43 @@ def _add_sfx(egc_data, new_id, old_id):
     sfx += 1
 
 AttributeModePfx = {
-        "complete": "all",
-        "conservation": "v",
         "count": "c",
-        "members_presence": "mp",
+        "complete_count": "c",
+        "members_count": "mc",
         "presence": "p",
-        "relative": "r",
+        "complete_presence": "p",
+        "members_presence": "mp",
+        "length": "l",
+        "average_length": "al",
+        "relative_count": "rc",
         "relative_length": "rl",
         None: "x",
       }
 
 GroupTypePfx = {
-        "requirement": "r",
-        "specific_nutrient_availablity": "r",
-        "biological_interaction": "i",
-        "biological_interaction_partner_taxonomy": "ip",
+        # derived
         "combined": "c",
-        "cultiviability": "cv",
-        "geographical": "g",
-        "gram_stain": "gs",
-        "habitat": "h",
         "inverted": "n",
-        "metabolic": "m",
-        "metagenome_assembled": "ma",
-        "paraphyletic": "pt",
-        "resultive_disease_symptom": "d",
-        "strain": "s",
-        "taxis": "x",
+        # taxon
         "taxonomic": "t",
-        "trophic_strategy": "ts",
+        "paraphyletic": "pt",
+        "strain": "s",
+        "metagenome_assembled": "mag",
+        # habitat
+        "habitat_*": "h",
+        "biome": "b",
+        "compound_level": "cl",
+        "cultiviability": "cv",
+        # phenotype
+        "primary_metabolism": "pm",
+        "metabolic_trait": "m",
+        "gram_stain": "gs",
+        "taxis": "ts",
+        "biointeraction_class": "ic",
+        "biointeraction_partner": "ip",
+        "biointeraction_outcome": "io",
+        # location
+        "geographical": "g",
         None: "x",
       }
 
@@ -87,8 +95,8 @@ def generate_A_id(egc_data, unit_id, mode, old_id=None):
 
 def generate_G_id(egc_data, name, gtype, old_id=None):
   name = "_".join([_sanitize(n, "")[:5] for n in name.split(" ")])
-  if gtype.endswith("_requirement"):
-    pfx = GroupTypePfx["requirement"]
+  if gtype.startswith("habitat_"):
+    pfx = GroupTypePfx["habitat_*"]
   else:
     pfx = GroupTypePfx.get(gtype, GroupTypePfx[None]+gtype[0])
   return _new_id(egc_data, f'G{pfx}_{name}', old_id)
